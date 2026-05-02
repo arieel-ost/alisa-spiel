@@ -77,6 +77,7 @@ export default function Game({ onExit }) {
   const [featherTime, setFeatherTime] = useState(0)
   const [shield, setShield] = useState(false)
   const [coinsCount, setCoinsCount] = useState(0)
+  const [bombShield, setBombShield] = useState(0)
   const [status, setStatus] = useState('playing') // playing | won | lost | finished
   const [, force] = useState(0)
   const [resetTrigger, setResetTrigger] = useState(0)
@@ -128,6 +129,7 @@ export default function Game({ onExit }) {
       rainbowFrames: 0,
       featherFrames: 0,
       shield: false,
+      bombShield: 0,
       enemies: level.enemies.map((e) => ({
         ...e,
         startX: e.x,
@@ -148,6 +150,7 @@ export default function Game({ onExit }) {
     setFeatherTime(0)
     setShield(false)
     setCoinsCount(0)
+    setBombShield(0)
     force((n) => n + 1)
   }, [levelIndex, resetTrigger])
 
@@ -188,6 +191,11 @@ export default function Game({ onExit }) {
       // 9 oder Numpad-9 → Level neu starten
       if (e.key === '9' || e.code === 'Numpad9') {
         restartLevel()
+      }
+      // P → Hexer-Schild auffüllen (3 Bomben blocken)
+      if (e.key === 'p' || e.key === 'P') {
+        if (stateRef.current) stateRef.current.bombShield = 3
+        setBombShield(3)
       }
     }
     const up = (e) => {
@@ -681,6 +689,13 @@ export default function Game({ onExit }) {
 
         // Treffer auf Spieler
         if (rectsOverlap(pr, epr) && p.invincibleFrames === 0 && !p.slamming && s.rainbowFrames === 0) {
+          // Hexer-Schild fängt Hexer-Bomben ab (kostet 1 Ladung)
+          if (ep.kind === 'bolt' && s.bombShield > 0) {
+            s.bombShield -= 1
+            setBombShield(s.bombShield)
+            ep.dead = true
+            continue
+          }
           ep.dead = true
           if (s.shield) {
             s.shield = false
@@ -874,6 +889,11 @@ export default function Game({ onExit }) {
         {shield && (
           <div className="hud-item power-badge shield-badge">
             🛡️ Schild aktiv
+          </div>
+        )}
+        {bombShield > 0 && (
+          <div className="hud-item power-badge bombshield-badge">
+            🧙🛡️ Hexer-Schild: {bombShield}
           </div>
         )}
         {featherTime > 0 && (
