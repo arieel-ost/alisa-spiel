@@ -1,77 +1,335 @@
-// 100 Levels — automatisch erzeugt, 10 Welten mit je 10 Levels
-// Schwierigkeit steigt mit der Welt UND innerhalb der Welt.
-// Ghost-Gegner erst ab Level 10 (per Anwender-Wunsch).
+// Levels 1-5: original handcrafted layouts (Wiese, Wolken, Berggipfel, Dunkler Wald, Drachenburg)
+// Levels 6-100: procedurally generated, themed in 10 worlds with rising difficulty.
 //
 // Items in Blöcken: 'diamond' 💎, 'heart' ❤️, 'mushroom' 🍄, 'fire' 🔥, 'ice' ❄️,
-//                    'rainbow' 🌈, 'shield' 🛡️, 'wizardshield' 🧿, 'feather' 🪶, 'crown' 👑
+//                    'rainbow' 🌈, 'shield' 🛡️, 'wizardshield' 🧿, 'feather' 🪶, 'crown' 👑,
 //                    'magnet' 🧲, 'bomb' 💣, 'clock' ⏰, 'coinbag' 💰, 'lightning' ⚡
-// Gegner: 'monster' 👾, 'bug' 🐛, 'bat' 🦇, 'wizard' 🧙, 'ghost' 👻, 'dragon' 🐉
+// Feinde:
+//   'monster' 👾, 'bug' 🐛, 'bat' 🦇, 'wizard' 🧙, 'ghost' 👻 (ab Lvl 10), 'dragon' 🐉
 
-const THEMES = [
-  // Welt 1: Wiese (Levels 1-10)
+const HANDCRAFTED = [
   {
     name: 'Wiese',
     bgColor: 'linear-gradient(180deg, #87ceeb 0%, #b8e6f5 70%, #c5e8a8 100%)',
-    enemies: ['monster', 'bug'],
+    width: 1600,
+    platforms: [
+      { x: 200, y: 350, w: 120, h: 20 },
+      { x: 400, y: 280, w: 120, h: 20 },
+      { x: 600, y: 220, w: 100, h: 20 },
+      { x: 800, y: 300, w: 140, h: 20 },
+      { x: 1050, y: 240, w: 120, h: 20 },
+      { x: 1300, y: 320, w: 120, h: 20 },
+    ],
+    stars: [
+      { x: 230, y: 310 },
+      { x: 440, y: 240 },
+      { x: 640, y: 180 },
+      { x: 850, y: 260 },
+      { x: 1100, y: 200 },
+      { x: 1340, y: 280 },
+    ],
+    blocks: [
+      { item: 'diamond', x: 280, y: 240 },
+      { item: 'fire', x: 460, y: 200 },
+      { item: 'mushroom', x: 700, y: 200 },
+      { item: 'shield', x: 900, y: 220 },
+      { item: 'heart', x: 1170, y: 200 },
+      { item: 'crown', x: 1280, y: 150 },
+      { item: 'diamond', x: 1380, y: 250 },
+    ],
+    coins: [
+      { x: 100, y: 380 }, { x: 140, y: 380 }, { x: 180, y: 380 },
+      { x: 360, y: 240 }, { x: 530, y: 240 },
+      { x: 740, y: 250 }, { x: 780, y: 250 },
+      { x: 880, y: 380 }, { x: 920, y: 380 },
+      { x: 1220, y: 250 },
+      { x: 1450, y: 380 }, { x: 1490, y: 380 },
+    ],
+    enemies: [
+      { type: 'monster', x: 500, y: 400, range: 80 },
+      { type: 'bug', x: 950, y: 405, range: 60 },
+      { type: 'monster', x: 1200, y: 400, range: 70 },
+    ],
+    goal: { x: 1500, y: 360 },
   },
-  // Welt 2: Wolken (Levels 11-20)
   {
     name: 'Wolken',
     bgColor: 'linear-gradient(180deg, #ffd6e7 0%, #fff6cc 70%, #c8f0ff 100%)',
-    enemies: ['monster', 'bat'],
+    width: 1800,
+    platforms: [
+      { x: 180, y: 360, w: 100, h: 20 },
+      { x: 360, y: 290, w: 100, h: 20 },
+      { x: 540, y: 220, w: 80, h: 20 },
+      { x: 700, y: 290, w: 80, h: 20 },
+      { x: 860, y: 220, w: 80, h: 20 },
+      { x: 1020, y: 290, w: 100, h: 20 },
+      { x: 1220, y: 200, w: 100, h: 20 },
+      { x: 1420, y: 280, w: 100, h: 20 },
+      { x: 1600, y: 340, w: 100, h: 20 },
+    ],
+    stars: [
+      { x: 210, y: 320 },
+      { x: 390, y: 250 },
+      { x: 560, y: 180 },
+      { x: 720, y: 250 },
+      { x: 880, y: 180 },
+      { x: 1050, y: 250 },
+      { x: 1250, y: 160 },
+      { x: 1450, y: 240 },
+    ],
+    blocks: [
+      { item: 'diamond', x: 280, y: 240 },
+      { item: 'ice', x: 460, y: 130 },
+      { item: 'mushroom', x: 620, y: 130 },
+      { item: 'feather', x: 800, y: 250 },
+      { item: 'heart', x: 950, y: 130 },
+      { item: 'fire', x: 1130, y: 220 },
+      { item: 'crown', x: 1380, y: 130 },
+      { item: 'diamond', x: 1500, y: 200 },
+    ],
+    coins: [
+      { x: 100, y: 380 }, { x: 140, y: 380 },
+      { x: 320, y: 250 }, { x: 360, y: 250 },
+      { x: 590, y: 180 }, { x: 630, y: 180 },
+      { x: 880, y: 180 },
+      { x: 1100, y: 380 }, { x: 1140, y: 380 }, { x: 1180, y: 380 },
+      { x: 1380, y: 380 },
+      { x: 1660, y: 380 }, { x: 1700, y: 380 },
+    ],
+    enemies: [
+      { type: 'monster', x: 600, y: 400, range: 120 },
+      { type: 'bat', x: 800, y: 150, range: 80 },
+      { type: 'monster', x: 1100, y: 400, range: 150 },
+      { type: 'bat', x: 1350, y: 130, range: 100 },
+      { type: 'bug', x: 1500, y: 405, range: 80 },
+    ],
+    goal: { x: 1700, y: 360 },
   },
-  // Welt 3: Berggipfel (Levels 21-30)
   {
     name: 'Berggipfel',
     bgColor: 'linear-gradient(180deg, #4a4e69 0%, #9a8c98 60%, #f2e9e4 100%)',
-    enemies: ['bat', 'wizard', 'monster'],
+    width: 2000,
+    platforms: [
+      { x: 150, y: 370, w: 80, h: 20 },
+      { x: 280, y: 310, w: 70, h: 20 },
+      { x: 400, y: 250, w: 70, h: 20 },
+      { x: 520, y: 190, w: 70, h: 20 },
+      { x: 680, y: 250, w: 70, h: 20 },
+      { x: 820, y: 320, w: 80, h: 20 },
+      { x: 980, y: 250, w: 70, h: 20 },
+      { x: 1120, y: 180, w: 70, h: 20 },
+      { x: 1280, y: 240, w: 70, h: 20 },
+      { x: 1420, y: 300, w: 80, h: 20 },
+      { x: 1580, y: 230, w: 70, h: 20 },
+      { x: 1740, y: 290, w: 80, h: 20 },
+      { x: 1880, y: 350, w: 80, h: 20 },
+    ],
+    stars: [
+      { x: 170, y: 330 },
+      { x: 300, y: 270 },
+      { x: 420, y: 210 },
+      { x: 540, y: 150 },
+      { x: 700, y: 210 },
+      { x: 840, y: 280 },
+      { x: 1000, y: 210 },
+      { x: 1140, y: 140 },
+      { x: 1300, y: 200 },
+      { x: 1600, y: 190 },
+    ],
+    blocks: [
+      { item: 'diamond', x: 250, y: 240 },
+      { item: 'fire', x: 380, y: 180 },
+      { item: 'wizardshield', x: 470, y: 200 },
+      { item: 'rainbow', x: 500, y: 110 },
+      { item: 'mushroom', x: 600, y: 110 },
+      { item: 'ice', x: 880, y: 250 },
+      { item: 'heart', x: 1050, y: 130 },
+      { item: 'shield', x: 1200, y: 150 },
+      { item: 'diamond', x: 1340, y: 170 },
+      { item: 'fire', x: 1500, y: 230 },
+      { item: 'mushroom', x: 1620, y: 130 },
+      { item: 'crown', x: 1760, y: 140 },
+      { item: 'ice', x: 1830, y: 220 },
+    ],
+    coins: [
+      { x: 100, y: 380 },
+      { x: 250, y: 200 }, { x: 290, y: 200 },
+      { x: 420, y: 220 },
+      { x: 700, y: 200 }, { x: 740, y: 200 },
+      { x: 950, y: 220 },
+      { x: 1200, y: 380 }, { x: 1240, y: 380 },
+      { x: 1430, y: 270 }, { x: 1470, y: 270 },
+      { x: 1700, y: 380 },
+      { x: 1900, y: 320 }, { x: 1940, y: 320 },
+    ],
+    enemies: [
+      { type: 'monster', x: 450, y: 400, range: 100 },
+      { type: 'wizard', x: 700, y: 384 },
+      { type: 'bat', x: 850, y: 100, range: 120 },
+      { type: 'monster', x: 1050, y: 400, range: 100 },
+      { type: 'bug', x: 1400, y: 405, range: 80 },
+      { type: 'wizard', x: 1700, y: 384 },
+    ],
+    goal: { x: 1920, y: 370 },
   },
-  // Welt 4: Dunkler Wald (Levels 31-40)
   {
     name: 'Dunkler Wald',
     bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
-    enemies: ['wizard', 'ghost', 'monster'],
+    width: 2000,
+    platforms: [
+      { x: 200, y: 340, w: 100, h: 20 },
+      { x: 380, y: 270, w: 90, h: 20 },
+      { x: 560, y: 200, w: 80, h: 20 },
+      { x: 740, y: 280, w: 90, h: 20 },
+      { x: 920, y: 220, w: 90, h: 20 },
+      { x: 1110, y: 300, w: 100, h: 20 },
+      { x: 1300, y: 220, w: 80, h: 20 },
+      { x: 1470, y: 290, w: 90, h: 20 },
+      { x: 1650, y: 200, w: 90, h: 20 },
+      { x: 1820, y: 320, w: 100, h: 20 },
+    ],
+    stars: [
+      { x: 230, y: 300 },
+      { x: 410, y: 230 },
+      { x: 580, y: 160 },
+      { x: 760, y: 240 },
+      { x: 940, y: 180 },
+      { x: 1140, y: 260 },
+      { x: 1320, y: 180 },
+      { x: 1500, y: 250 },
+      { x: 1680, y: 160 },
+      { x: 1850, y: 280 },
+    ],
+    blocks: [
+      { item: 'fire', x: 300, y: 250 },
+      { item: 'wizardshield', x: 420, y: 200 },
+      { item: 'shield', x: 500, y: 150 },
+      { item: 'heart', x: 650, y: 130 },
+      { item: 'mushroom', x: 850, y: 250 },
+      { item: 'ice', x: 1050, y: 220 },
+      { item: 'diamond', x: 1240, y: 150 },
+      { item: 'rainbow', x: 1370, y: 130 },
+      { item: 'fire', x: 1400, y: 220 },
+      { item: 'mushroom', x: 1580, y: 130 },
+      { item: 'feather', x: 1700, y: 250 },
+      { item: 'crown', x: 1800, y: 130 },
+      { item: 'diamond', x: 1900, y: 250 },
+    ],
+    coins: [
+      { x: 100, y: 380 }, { x: 140, y: 380 },
+      { x: 230, y: 300 }, { x: 270, y: 300 },
+      { x: 470, y: 200 },
+      { x: 770, y: 240 }, { x: 810, y: 240 },
+      { x: 1050, y: 380 },
+      { x: 1330, y: 180 },
+      { x: 1620, y: 380 }, { x: 1660, y: 380 },
+      { x: 1850, y: 280 }, { x: 1900, y: 280 },
+    ],
+    enemies: [
+      { type: 'bat', x: 350, y: 100, range: 100 },
+      { type: 'wizard', x: 600, y: 384 },
+      { type: 'monster', x: 800, y: 400, range: 80 },
+      { type: 'bat', x: 1000, y: 100, range: 130 },
+      { type: 'dragon', x: 1200, y: 130, range: 150 },
+      { type: 'wizard', x: 1450, y: 384 },
+      { type: 'monster', x: 1650, y: 400, range: 100 },
+      { type: 'bat', x: 1850, y: 100, range: 100 },
+    ],
+    goal: { x: 1940, y: 370 },
   },
-  // Welt 5: Drachenburg (Levels 41-50)
   {
     name: 'Drachenburg',
     bgColor: 'linear-gradient(180deg, #450a0a 0%, #7f1d1d 40%, #b91c1c 80%, #fbbf24 100%)',
-    enemies: ['wizard', 'dragon', 'bat'],
-  },
-  // Welt 6: Eishöhle (Levels 51-60)
-  {
-    name: 'Eishöhle',
-    bgColor: 'linear-gradient(180deg, #0c4a6e 0%, #0ea5e9 50%, #e0f2fe 100%)',
-    enemies: ['bat', 'ghost', 'monster'],
-  },
-  // Welt 7: Wüste (Levels 61-70)
-  {
-    name: 'Wüste',
-    bgColor: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%)',
-    enemies: ['bug', 'wizard', 'dragon'],
-  },
-  // Welt 8: Tiefe Höhle (Levels 71-80)
-  {
-    name: 'Tiefe Höhle',
-    bgColor: 'linear-gradient(180deg, #18181b 0%, #3f3f46 50%, #71717a 100%)',
-    enemies: ['bat', 'wizard', 'ghost'],
-  },
-  // Welt 9: Weltraum (Levels 81-90)
-  {
-    name: 'Weltraum',
-    bgColor: 'linear-gradient(180deg, #020617 0%, #1e293b 50%, #6366f1 100%)',
-    enemies: ['bat', 'dragon', 'ghost'],
-  },
-  // Welt 10: Regenbogen-Land (Levels 91-100)
-  {
-    name: 'Regenbogen-Land',
-    bgColor:
-      'linear-gradient(180deg, #ec4899 0%, #fbbf24 30%, #4ade80 60%, #38bdf8 80%, #a855f7 100%)',
-    enemies: ['dragon', 'wizard', 'ghost'],
+    width: 2200,
+    platforms: [
+      { x: 180, y: 340, w: 100, h: 20 },
+      { x: 360, y: 270, w: 90, h: 20 },
+      { x: 540, y: 340, w: 100, h: 20 },
+      { x: 720, y: 240, w: 90, h: 20 },
+      { x: 900, y: 320, w: 100, h: 20 },
+      { x: 1080, y: 250, w: 90, h: 20 },
+      { x: 1260, y: 320, w: 100, h: 20 },
+      { x: 1440, y: 230, w: 90, h: 20 },
+      { x: 1620, y: 310, w: 100, h: 20 },
+      { x: 1800, y: 240, w: 90, h: 20 },
+      { x: 1980, y: 320, w: 100, h: 20 },
+    ],
+    stars: [
+      { x: 210, y: 300 },
+      { x: 390, y: 230 },
+      { x: 570, y: 300 },
+      { x: 750, y: 200 },
+      { x: 930, y: 280 },
+      { x: 1110, y: 210 },
+      { x: 1290, y: 280 },
+      { x: 1470, y: 190 },
+      { x: 1650, y: 270 },
+      { x: 1830, y: 200 },
+      { x: 2010, y: 280 },
+    ],
+    blocks: [
+      { item: 'fire', x: 280, y: 250 },
+      { item: 'shield', x: 380, y: 180 },
+      { item: 'wizardshield', x: 420, y: 100 },
+      { item: 'heart', x: 470, y: 200 },
+      { item: 'ice', x: 650, y: 280 },
+      { item: 'rainbow', x: 750, y: 100 },
+      { item: 'mushroom', x: 820, y: 170 },
+      { item: 'feather', x: 950, y: 220 },
+      { item: 'diamond', x: 1000, y: 250 },
+      { item: 'fire', x: 1180, y: 180 },
+      { item: 'heart', x: 1370, y: 250 },
+      { item: 'crown', x: 1500, y: 100 },
+      { item: 'ice', x: 1550, y: 160 },
+      { item: 'mushroom', x: 1730, y: 240 },
+      { item: 'rainbow', x: 1850, y: 100 },
+      { item: 'diamond', x: 1900, y: 170 },
+      { item: 'crown', x: 2050, y: 240 },
+    ],
+    coins: [
+      { x: 100, y: 380 }, { x: 140, y: 380 }, { x: 180, y: 380 },
+      { x: 380, y: 230 },
+      { x: 590, y: 300 }, { x: 630, y: 300 },
+      { x: 920, y: 280 },
+      { x: 1130, y: 220 }, { x: 1170, y: 220 },
+      { x: 1410, y: 380 },
+      { x: 1670, y: 270 }, { x: 1710, y: 270 },
+      { x: 2010, y: 380 }, { x: 2050, y: 380 }, { x: 2090, y: 380 },
+    ],
+    enemies: [
+      { type: 'dragon', x: 300, y: 130, range: 130 },
+      { type: 'wizard', x: 500, y: 384 },
+      { type: 'bat', x: 700, y: 100, range: 120 },
+      { type: 'dragon', x: 900, y: 110, range: 150 },
+      { type: 'wizard', x: 1100, y: 384 },
+      { type: 'monster', x: 1300, y: 400, range: 100 },
+      { type: 'dragon', x: 1500, y: 130, range: 160 },
+      { type: 'wizard', x: 1700, y: 384 },
+      { type: 'bat', x: 1900, y: 100, range: 130 },
+      { type: 'dragon', x: 2050, y: 100, range: 120 },
+    ],
+    goal: { x: 2140, y: 370 },
   },
 ]
 
-// Deterministischer Pseudo-Zufall
+// ----------------------------------------------------------------------
+// Levels 6-100: prozedural generiert
+// ----------------------------------------------------------------------
+
+const THEMES = [
+  { name: 'Eishöhle', bgColor: 'linear-gradient(180deg, #0c4a6e 0%, #0ea5e9 50%, #e0f2fe 100%)', enemies: ['bat', 'ghost', 'monster'] },
+  { name: 'Wüste', bgColor: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%)', enemies: ['bug', 'wizard', 'dragon'] },
+  { name: 'Tiefe Höhle', bgColor: 'linear-gradient(180deg, #18181b 0%, #3f3f46 50%, #71717a 100%)', enemies: ['bat', 'wizard', 'ghost'] },
+  { name: 'Weltraum', bgColor: 'linear-gradient(180deg, #020617 0%, #1e293b 50%, #6366f1 100%)', enemies: ['bat', 'dragon', 'ghost'] },
+  { name: 'Regenbogen-Land', bgColor: 'linear-gradient(180deg, #ec4899 0%, #fbbf24 30%, #4ade80 60%, #38bdf8 80%, #a855f7 100%)', enemies: ['dragon', 'wizard', 'ghost'] },
+  // Wiederholungen für höhere Levels mit härteren Gegner-Mischungen
+  { name: 'Vulkan', bgColor: 'linear-gradient(180deg, #450a0a 0%, #ef4444 50%, #fbbf24 100%)', enemies: ['dragon', 'wizard', 'ghost'] },
+  { name: 'Schloss-Garten', bgColor: 'linear-gradient(180deg, #6b21a8 0%, #c084fc 60%, #fce7f3 100%)', enemies: ['wizard', 'ghost', 'bat'] },
+  { name: 'Sumpf', bgColor: 'linear-gradient(180deg, #14532d 0%, #65a30d 50%, #a3e635 100%)', enemies: ['bug', 'wizard', 'ghost'] },
+  { name: 'Sternenmeer', bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #6366f1 50%, #c4b5fd 100%)', enemies: ['ghost', 'dragon', 'bat'] },
+  { name: 'Endkampf', bgColor: 'linear-gradient(180deg, #18181b 0%, #ef4444 30%, #f97316 60%, #fde047 100%)', enemies: ['dragon', 'wizard', 'ghost'] },
+]
+
 function seededRandom(seed) {
   let x = seed
   return () => {
@@ -98,11 +356,13 @@ const ITEM_POOL = [
 ]
 
 function generateLevel(index) {
-  const worldIdx = Math.floor((index - 1) / 10)
-  const localLvl = ((index - 1) % 10) + 1
+  // Levels 6-100 → Welten ab Index 0 (also Eishöhle für Level 6-15, etc.)
+  const genIdx = index - 6 // 0-basierter generierter Index (0..94)
+  const worldIdx = Math.floor(genIdx / 10) % THEMES.length
+  const localLvl = (genIdx % 10) + 1
   const theme = THEMES[worldIdx]
-  // Schwierigkeit wächst: Welt > lokales Level
-  const difficulty = worldIdx * 0.7 + localLvl * 0.18
+  // Schwierigkeit wächst stetig mit dem Level
+  const difficulty = 1.5 + (index - 6) * 0.12
   const rng = seededRandom(index * 1009 + 31)
 
   const width = Math.min(3200, Math.floor(1500 + difficulty * 90))
@@ -112,35 +372,27 @@ function generateLevel(index) {
   const numBlocks = Math.min(16, 3 + Math.floor(difficulty * 0.45))
   const numEnemies = Math.min(16, 2 + Math.floor(difficulty * 0.55))
 
-  // Plattformen — gleichmässig verteilt mit kleiner Zufallsvariation
   const platforms = []
   const usableWidth = width - 350
   for (let i = 0; i < numPlatforms; i++) {
     const zoneStart = 200 + (i * usableWidth) / numPlatforms
     const x = Math.floor(zoneStart + rng() * 50)
-    const yMin = 130
-    const yMax = 360
-    const y = Math.floor(yMin + rng() * (yMax - yMin))
+    const y = Math.floor(130 + rng() * 230)
     const w = Math.floor(70 + rng() * 70)
     platforms.push({ x, y, w, h: 20 })
   }
   platforms.sort((a, b) => a.x - b.x)
 
-  // Sterne — meistens auf oder über Plattformen
   const stars = []
   for (let i = 0; i < numStars; i++) {
     if (i < platforms.length && rng() < 0.7) {
       const p = platforms[i]
       stars.push({ x: p.x + Math.floor(p.w / 2 - 14), y: p.y - 35 })
     } else {
-      stars.push({
-        x: Math.floor(200 + rng() * (width - 400)),
-        y: Math.floor(130 + rng() * 220),
-      })
+      stars.push({ x: Math.floor(200 + rng() * (width - 400)), y: Math.floor(130 + rng() * 220) })
     }
   }
 
-  // Münzen — entlang des Bodenpfades und über manche Plattformen
   const coins = []
   for (let i = 0; i < numCoins; i++) {
     const onPlatform = rng() < 0.35 && platforms.length > 0
@@ -153,7 +405,6 @@ function generateLevel(index) {
     }
   }
 
-  // Fragezeichen-Blöcke
   const blocks = []
   const blockGap = (width - 400) / Math.max(1, numBlocks)
   for (let i = 0; i < numBlocks; i++) {
@@ -163,7 +414,6 @@ function generateLevel(index) {
     blocks.push({ item, x, y })
   }
 
-  // Gegner — Geister erst ab Level 10
   const allowedEnemies = theme.enemies.filter((e) => e !== 'ghost' || index >= 10)
   const enemies = []
   const enemyGap = (width - 500) / Math.max(1, numEnemies)
@@ -176,23 +426,13 @@ function generateLevel(index) {
     } else if (enemyType === 'bug') {
       enemy = { type: 'bug', x: baseX, y: 405, range: 50 + Math.floor(rng() * 60) }
     } else if (enemyType === 'bat') {
-      enemy = {
-        type: 'bat',
-        x: baseX,
-        y: Math.floor(80 + rng() * 100),
-        range: 80 + Math.floor(rng() * 80),
-      }
+      enemy = { type: 'bat', x: baseX, y: Math.floor(80 + rng() * 100), range: 80 + Math.floor(rng() * 80) }
     } else if (enemyType === 'wizard') {
       enemy = { type: 'wizard', x: baseX, y: 384 }
     } else if (enemyType === 'ghost') {
       enemy = { type: 'ghost', x: baseX, y: Math.floor(150 + rng() * 100) }
     } else if (enemyType === 'dragon') {
-      enemy = {
-        type: 'dragon',
-        x: baseX,
-        y: Math.floor(80 + rng() * 80),
-        range: 100 + Math.floor(rng() * 80),
-      }
+      enemy = { type: 'dragon', x: baseX, y: Math.floor(80 + rng() * 80), range: 100 + Math.floor(rng() * 80) }
     }
     enemies.push(enemy)
   }
@@ -210,4 +450,7 @@ function generateLevel(index) {
   }
 }
 
-export const LEVELS = Array.from({ length: 100 }, (_, i) => generateLevel(i + 1))
+const GENERATED = []
+for (let i = 6; i <= 100; i++) GENERATED.push(generateLevel(i))
+
+export const LEVELS = [...HANDCRAFTED, ...GENERATED]
