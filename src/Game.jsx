@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LEVELS } from './levels'
+import { startMusic, stopMusic, setMuted, playSfx } from './audio'
 import './Game.css'
 
 const GRAVITY = 0.7
@@ -48,6 +49,7 @@ const ITEM_EMOJI = {
   ice: '❄️',
   rainbow: '🌈',
   shield: '🛡️',
+  wizardshield: '🧿',
   feather: '🪶',
   crown: '👑',
 }
@@ -78,6 +80,7 @@ export default function Game({ onExit }) {
   const [shield, setShield] = useState(false)
   const [coinsCount, setCoinsCount] = useState(0)
   const [bombShield, setBombShield] = useState(0)
+  const [musicOn, setMusicOn] = useState(false)
   const [status, setStatus] = useState('playing') // playing | won | lost | finished
   const [, force] = useState(0)
   const [resetTrigger, setResetTrigger] = useState(0)
@@ -130,6 +133,9 @@ export default function Game({ onExit }) {
       featherFrames: 0,
       shield: false,
       bombShield: 0,
+      floatingTexts: [],
+      landFlashFrames: 0,
+      lastOnGround: true,
       enemies: level.enemies.map((e) => ({
         ...e,
         startX: e.x,
@@ -180,6 +186,22 @@ export default function Game({ onExit }) {
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
+
+  // Musik beenden, wenn das Spiel verlassen wird
+  useEffect(() => {
+    return () => stopMusic()
+  }, [])
+
+  const toggleMusic = () => {
+    if (musicOn) {
+      setMuted(true)
+      setMusicOn(false)
+    } else {
+      startMusic()
+      setMuted(false)
+      setMusicOn(true)
+    }
+  }
 
   // Tastatur
   useEffect(() => {
@@ -376,6 +398,10 @@ export default function Game({ onExit }) {
 
       const pr = { x: p.x, y: p.y, w: PLAYER_W, h: PLAYER_H }
 
+      const popText = (x, y, text, color = '#fbbf24') => {
+        s.floatingTexts.push({ x, y, text, color, age: 0 })
+      }
+
       // Sterne einsammeln
       for (const star of s.stars) {
         if (!star.taken) {
@@ -385,6 +411,7 @@ export default function Game({ onExit }) {
             setStars((n) => n + 1)
             setScore((n) => n + 1)
             setTotalScore((n) => n + 1)
+            popText(star.x, star.y, '+1', '#fbbf24')
           }
         }
       }
@@ -398,6 +425,7 @@ export default function Game({ onExit }) {
             setCoinsCount((n) => n + 1)
             setScore((n) => n + 1)
             setTotalScore((n) => n + 1)
+            popText(coin.x, coin.y, '+1', '#fbbf24')
           }
         }
       }
@@ -454,28 +482,40 @@ export default function Game({ onExit }) {
             if (item.type === 'diamond') {
               setScore((n) => n + 3)
               setTotalScore((n) => n + 3)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: '+3', color: '#22d3ee', age: 0 })
             } else if (item.type === 'heart') {
               setLives((l) => l + 1)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: '+❤️', color: '#f43f5e', age: 0 })
             } else if (item.type === 'mushroom') {
               s.superJumpFrames = SUPER_JUMP_DURATION
               setSuperJump(SUPER_JUMP_DURATION)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'SUPER!', color: '#ec4899', age: 0 })
             } else if (item.type === 'fire' || item.type === 'ice') {
               s.power = item.type
               s.powerFrames = POWER_DURATION
               setPower(item.type)
               setPowerTime(POWER_DURATION)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: item.type === 'fire' ? 'FEUER!' : 'EIS!', color: item.type === 'fire' ? '#f97316' : '#38bdf8', age: 0 })
             } else if (item.type === 'rainbow') {
               s.rainbowFrames = RAINBOW_DURATION
               setRainbowTime(RAINBOW_DURATION)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'REGENBOGEN!', color: '#ec4899', age: 0 })
             } else if (item.type === 'shield') {
               s.shield = true
               setShield(true)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'SCHILD!', color: '#0ea5e9', age: 0 })
+            } else if (item.type === 'wizardshield') {
+              s.bombShield = 3
+              setBombShield(3)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'HEXER-SCHILD!', color: '#ec4899', age: 0 })
             } else if (item.type === 'feather') {
               s.featherFrames = FEATHER_DURATION
               setFeatherTime(FEATHER_DURATION)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'SCHWEBEN!', color: '#fbbf24', age: 0 })
             } else if (item.type === 'crown') {
               setScore((n) => n + 10)
               setTotalScore((n) => n + 10)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: '+10!', color: '#fbbf24', age: 0 })
             }
           }
         }
@@ -558,6 +598,20 @@ export default function Game({ onExit }) {
 
       // Unverwundbarkeits-Frames runterzählen
       if (p.invincibleFrames > 0) p.invincibleFrames -= 1
+
+      // Lande-Animation: erkennen wann der Spieler landet
+      if (p.onGround && !s.lastOnGround && p.vy === 0) {
+        s.landFlashFrames = 8
+      }
+      s.lastOnGround = p.onGround
+      if (s.landFlashFrames > 0) s.landFlashFrames -= 1
+
+      // Schwebende Punkte-Texte animieren
+      for (const ft of s.floatingTexts) {
+        ft.age += 1
+        ft.y -= 1.2
+      }
+      s.floatingTexts = s.floatingTexts.filter((ft) => ft.age < 50)
 
       // Feinde bewegen + Kollision + Schiess-AI
       for (const e of s.enemies) {
@@ -911,6 +965,9 @@ export default function Game({ onExit }) {
             🪶 Schweben! {Math.ceil(featherTime / 60)}s (⬆️ halten)
           </div>
         )}
+        <button className="fs-btn" onClick={toggleMusic} title="Musik">
+          {musicOn ? '🔊' : '🔇'}
+        </button>
         <button className="fs-btn" onClick={toggleFullscreen} title="Vollbild">
           {isFullscreen ? '🗗' : '🗖'}
         </button>
@@ -1084,6 +1141,7 @@ export default function Game({ onExit }) {
               s.rainbowFrames > 0 && 'rainbow',
               s.shield && 'has-shield',
               s.featherFrames > 0 && 'flying',
+              s.landFlashFrames > 0 && 'landed',
             ].filter(Boolean).join(' ')}
             style={{
               left: p.x,
@@ -1108,6 +1166,22 @@ export default function Game({ onExit }) {
               {s.bombShield}
             </div>
           )}
+
+          {/* Schwebende Punkte-Texte */}
+          {s.floatingTexts.map((ft, i) => (
+            <div
+              key={`ft${i}`}
+              className="floating-text"
+              style={{
+                left: ft.x,
+                top: ft.y,
+                color: ft.color,
+                opacity: Math.max(0, 1 - ft.age / 50),
+              }}
+            >
+              {ft.text}
+            </div>
+          ))}
         </div>
       </div>
       </div>

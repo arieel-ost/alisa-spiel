@@ -6,7 +6,8 @@
 //   item = 'diamond' 💎 (3 Punkte), 'heart' ❤️ (extra Leben), 'mushroom' 🍄 (Super-Sprung),
 //          'fire' 🔥 (Feuerbälle), 'ice' ❄️ (Eiskristalle),
 //          'rainbow' 🌈 (Unverwundbar + rennt durch Gegner), 'shield' 🛡️ (blockt 1 Treffer),
-//          'feather' 🪶 (3-fach Sprung!), 'crown' 👑 (10 Bonus-Punkte!)
+//          'wizardshield' 🧿 (Hexer-Schild: 3 Ladungen gegen Hexer-Bomben + Berührung!),
+//          'feather' 🪶 (Schweben), 'crown' 👑 (10 Bonus-Punkte!)
 // coins: 🪙 Münzen (lose herumliegen, +1 Punkt pro Stück)
 // Feinde:
 //   'monster' 👾 läuft hin und her (kann zerstampft werden)
@@ -148,6 +149,7 @@ export const LEVELS = [
     blocks: [
       { item: 'diamond', x: 250, y: 240 },
       { item: 'fire', x: 380, y: 180 },
+      { item: 'wizardshield', x: 470, y: 200 },
       { item: 'rainbow', x: 500, y: 110 },
       { item: 'mushroom', x: 600, y: 110 },
       { item: 'ice', x: 880, y: 250 },
@@ -210,6 +212,7 @@ export const LEVELS = [
     ],
     blocks: [
       { item: 'fire', x: 300, y: 250 },
+      { item: 'wizardshield', x: 420, y: 200 },
       { item: 'shield', x: 500, y: 150 },
       { item: 'heart', x: 650, y: 130 },
       { item: 'mushroom', x: 850, y: 250 },
@@ -277,6 +280,7 @@ export const LEVELS = [
     blocks: [
       { item: 'fire', x: 280, y: 250 },
       { item: 'shield', x: 380, y: 180 },
+      { item: 'wizardshield', x: 420, y: 100 },
       { item: 'heart', x: 470, y: 200 },
       { item: 'ice', x: 650, y: 280 },
       { item: 'rainbow', x: 750, y: 100 },
