@@ -10,8 +10,16 @@ body,
   min-height: 100vh;
 }
 
+html, body {
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background: linear-gradient(135deg, #fef3ff 0%, #e0f2fe 50%, #fef9c3 100%);
   background-attachment: fixed;
   font-family: 'Comic Sans MS', 'Trebuchet MS', system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
 }

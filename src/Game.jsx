@@ -84,6 +84,8 @@ export default function Game({ onExit }) {
   const stateRef = useRef(null)
   const keysRef = useRef({})
   const animRef = useRef(null)
+  const wrapperRef = useRef(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Initialisiere Level
   useEffect(() => {
@@ -142,6 +144,33 @@ export default function Game({ onExit }) {
     setCoinsCount(0)
     force((n) => n + 1)
   }, [levelIndex, resetTrigger])
+
+  // Responsives Skalieren: das Spielfeld an die Bildschirmgrösse anpassen
+  useEffect(() => {
+    const onResize = () => {
+      // Platz für HUD oben (~70px) und Touch-Buttons unten (~150px auf Mobile)
+      const isMobile = window.matchMedia('(pointer: coarse), (max-width: 900px)').matches
+      const reservedY = isMobile ? 200 : 120
+      const sx = (window.innerWidth - 16) / VIEW_W
+      const sy = (window.innerHeight - reservedY) / VIEW_H
+      const scale = Math.max(0.3, Math.min(sx, sy, 1.6))
+      document.documentElement.style.setProperty('--game-scale', scale)
+    }
+    onResize()
+    window.addEventListener('resize', onResize)
+    window.addEventListener('orientationchange', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('orientationchange', onResize)
+    }
+  }, [])
+
+  // Fullscreen-Status verfolgen
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
 
   // Tastatur
   useEffect(() => {
@@ -739,6 +768,31 @@ export default function Game({ onExit }) {
     setResetTrigger((t) => t + 1)
   }
 
+  const toggleFullscreen = () => {
+    const el = wrapperRef.current || document.documentElement
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.().catch(() => {})
+    } else {
+      document.exitFullscreen?.()
+    }
+  }
+
+  // Hilfs-Renderer für Touch-Buttons (drückt eine Taste solange gehalten)
+  const touchProps = (key) => ({
+    onPointerDown: (e) => {
+      e.preventDefault()
+      e.currentTarget.setPointerCapture?.(e.pointerId)
+      keysRef.current[key] = true
+    },
+    onPointerUp: (e) => {
+      e.preventDefault()
+      keysRef.current[key] = false
+    },
+    onPointerCancel: () => { keysRef.current[key] = false },
+    onPointerLeave: () => { keysRef.current[key] = false },
+    onContextMenu: (e) => e.preventDefault(),
+  })
+
   const restart = () => {
     setStatus('playing')
     setStars(0)
@@ -749,7 +803,7 @@ export default function Game({ onExit }) {
   }
 
   return (
-    <div className="game-wrapper">
+    <div className="game-wrapper" ref={wrapperRef}>
       <div className="hud">
         <div className="hud-item">🎯 Level {levelIndex + 1}: {level.name}</div>
         <div className="hud-item">⭐ {stars} / {level.stars.length}</div>
@@ -781,9 +835,13 @@ export default function Game({ onExit }) {
             🪶 Schweben! {Math.ceil(featherTime / 60)}s (⬆️ halten)
           </div>
         )}
+        <button className="fs-btn" onClick={toggleFullscreen} title="Vollbild">
+          {isFullscreen ? '🗗' : '🗖'}
+        </button>
         <button className="exit-btn" onClick={onExit}>← Zurück</button>
       </div>
 
+      <div className="viewport-wrapper">
       <div
         className="viewport"
         style={{ width: VIEW_W, height: VIEW_H, background: level.bgColor }}
@@ -957,6 +1015,20 @@ export default function Game({ onExit }) {
               style={{ left: p.x, top: p.y + PLAYER_H, width: PLAYER_W }}
             />
           )}
+        </div>
+      </div>
+      </div>
+
+      {/* Touch-Steuerung für Handy */}
+      <div className="touch-controls" aria-hidden="true">
+        <div className="touch-pad-left">
+          <button className="touch-btn touch-arrow" {...touchProps('ArrowLeft')}>◀</button>
+          <button className="touch-btn touch-arrow" {...touchProps('ArrowRight')}>▶</button>
+        </div>
+        <div className="touch-pad-right">
+          <button className="touch-btn touch-shoot" {...touchProps('x')}>🔥</button>
+          <button className="touch-btn touch-down" {...touchProps('ArrowDown')}>💥</button>
+          <button className="touch-btn touch-jump" {...touchProps('ArrowUp')}>⬆️</button>
         </div>
       </div>
 
