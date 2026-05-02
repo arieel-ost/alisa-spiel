@@ -777,6 +777,97 @@
   animation: pulse 0.7s ease-in-out infinite alternate;
 }
 
+.hud-item.magnet-badge {
+  background: linear-gradient(90deg, #f43f5e, #f97316);
+  color: white;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  animation: pulse 0.7s ease-in-out infinite alternate;
+}
+
+.hud-item.freeze-badge {
+  background: linear-gradient(90deg, #0ea5e9, #67e8f9);
+  color: white;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+
+.hud-item.lightning-badge {
+  background: linear-gradient(90deg, #fde047, #facc15);
+  color: #422006;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  animation: pulse 0.3s ease-in-out infinite alternate;
+}
+
+/* Eingefrorener Gegner */
+.enemy.frozen {
+  filter: drop-shadow(0 0 8px #67e8f9) hue-rotate(180deg) saturate(0.6) brightness(1.2);
+  animation: none !important;
+}
+
+/* Bomben-Blitz Overlay */
+.bomb-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(249, 115, 22, 0.7) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* Neue Items */
+.item-magnet {
+  filter: drop-shadow(0 0 10px #f43f5e);
+  animation: magnetPulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes magnetPulse {
+  from { transform: scale(1) rotate(-10deg); }
+  to   { transform: scale(1.15) rotate(10deg); }
+}
+
+.item-bomb {
+  filter: drop-shadow(0 0 10px #f97316);
+  animation: bombShake 0.2s ease-in-out infinite alternate;
+}
+
+@keyframes bombShake {
+  from { transform: translate(0, 0) rotate(-3deg); }
+  to   { transform: translate(1px, -2px) rotate(3deg); }
+}
+
+.item-clock {
+  filter: drop-shadow(0 0 10px #0ea5e9);
+  animation: clockTick 1s linear infinite;
+}
+
+@keyframes clockTick {
+  0%, 25% { transform: rotate(0deg); }
+  50%, 75% { transform: rotate(15deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.item-coinbag {
+  filter: drop-shadow(0 0 10px #fbbf24);
+  animation: coinbagBounce 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes coinbagBounce {
+  from { transform: translateY(0) scale(1); }
+  to   { transform: translateY(-5px) scale(1.1); }
+}
+
+.item-lightning {
+  filter: drop-shadow(0 0 14px #fde047);
+  animation: lightningFlash 0.25s ease-in-out infinite alternate;
+}
+
+@keyframes lightningFlash {
+  from { transform: scale(1); filter: drop-shadow(0 0 12px #fde047); }
+  to   { transform: scale(1.2); filter: drop-shadow(0 0 22px white); }
+}
+
 .hud-item.feather-badge {
   background: linear-gradient(90deg, #fcd34d, #f59e0b);
   color: white;
@@ -856,12 +947,14 @@
   position: absolute;
   width: 36px;
   height: 44px;
-  font-size: 38px;
+  font-size: 42px;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
   transition: transform 0.05s;
+  image-rendering: pixelated;
 }
 
 .player.hurt {

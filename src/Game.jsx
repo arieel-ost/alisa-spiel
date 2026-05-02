@@ -52,7 +52,16 @@ const ITEM_EMOJI = {
   wizardshield: '🧿',
   feather: '🪶',
   crown: '👑',
+  magnet: '🧲',
+  bomb: '💣',
+  clock: '⏰',
+  coinbag: '💰',
+  lightning: '⚡',
 }
+
+const MAGNET_DURATION = 900 // 15 Sekunden
+const FREEZE_DURATION = 480 // 8 Sekunden
+const LIGHTNING_DURATION = 600 // 10 Sekunden
 
 const POWER_EMOJI = { fire: '🔥', ice: '❄️' }
 const POWER_LABEL = { fire: 'Feuer', ice: 'Eis' }
@@ -66,7 +75,7 @@ function rectsOverlap(a, b) {
   )
 }
 
-export default function Game({ onExit }) {
+export default function Game({ onExit, character = '🐈' }) {
   const [levelIndex, setLevelIndex] = useState(0)
   const [stars, setStars] = useState(0)
   const [score, setScore] = useState(0)
@@ -80,6 +89,10 @@ export default function Game({ onExit }) {
   const [shield, setShield] = useState(false)
   const [coinsCount, setCoinsCount] = useState(0)
   const [bombShield, setBombShield] = useState(0)
+  const [magnetTime, setMagnetTime] = useState(0)
+  const [freezeTime, setFreezeTime] = useState(0)
+  const [lightningTime, setLightningTime] = useState(0)
+  const [bombFlash, setBombFlash] = useState(0)
   const [musicOn, setMusicOn] = useState(false)
   const [status, setStatus] = useState('playing') // playing | won | lost | finished
   const [, force] = useState(0)
@@ -133,6 +146,10 @@ export default function Game({ onExit }) {
       featherFrames: 0,
       shield: false,
       bombShield: 0,
+      magnetFrames: 0,
+      freezeFrames: 0,
+      lightningFrames: 0,
+      bombFlashFrames: 0,
       floatingTexts: [],
       landFlashFrames: 0,
       lastOnGround: true,
@@ -157,6 +174,10 @@ export default function Game({ onExit }) {
     setShield(false)
     setCoinsCount(0)
     setBombShield(0)
+    setMagnetTime(0)
+    setFreezeTime(0)
+    setLightningTime(0)
+    setBombFlash(0)
     force((n) => n + 1)
   }, [levelIndex, resetTrigger])
 
@@ -402,6 +423,35 @@ export default function Game({ onExit }) {
         s.floatingTexts.push({ x, y, text, color, age: 0 })
       }
 
+      const playerCx = p.x + PLAYER_W / 2
+      const playerCy = p.y + PLAYER_H / 2
+
+      // Magnet zieht Sterne und Münzen zum Spieler
+      if (s.magnetFrames > 0) {
+        for (const star of s.stars) {
+          if (star.taken) continue
+          const dx = playerCx - (star.x + STAR_SIZE / 2)
+          const dy = playerCy - (star.y + STAR_SIZE / 2)
+          const dist = Math.hypot(dx, dy)
+          if (dist < 280 && dist > 1) {
+            const speed = Math.min(10, 250 / dist)
+            star.x += (dx / dist) * speed
+            star.y += (dy / dist) * speed
+          }
+        }
+        for (const coin of s.coins) {
+          if (coin.taken) continue
+          const dx = playerCx - (coin.x + COIN_SIZE / 2)
+          const dy = playerCy - (coin.y + COIN_SIZE / 2)
+          const dist = Math.hypot(dx, dy)
+          if (dist < 280 && dist > 1) {
+            const speed = Math.min(10, 250 / dist)
+            coin.x += (dx / dist) * speed
+            coin.y += (dy / dist) * speed
+          }
+        }
+      }
+
       // Sterne einsammeln
       for (const star of s.stars) {
         if (!star.taken) {
@@ -516,6 +566,40 @@ export default function Game({ onExit }) {
               setScore((n) => n + 10)
               setTotalScore((n) => n + 10)
               s.floatingTexts.push({ x: item.x, y: item.y, text: '+10!', color: '#fbbf24', age: 0 })
+            } else if (item.type === 'magnet') {
+              s.magnetFrames = MAGNET_DURATION
+              setMagnetTime(MAGNET_DURATION)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'MAGNET!', color: '#f43f5e', age: 0 })
+            } else if (item.type === 'bomb') {
+              // Sofort: alle Gegner besiegen
+              let killed = 0
+              for (const e of s.enemies) {
+                if (!e.dead) {
+                  e.dead = true
+                  killed += 1
+                }
+              }
+              const points = killed * 2
+              if (points > 0) {
+                setScore((n) => n + points)
+                setTotalScore((n) => n + points)
+              }
+              s.bombFlashFrames = 24
+              setBombFlash(24)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: `BOOM! +${points}`, color: '#f97316', age: 0 })
+            } else if (item.type === 'clock') {
+              s.freezeFrames = FREEZE_DURATION
+              setFreezeTime(FREEZE_DURATION)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'ZEIT-STOPP!', color: '#0ea5e9', age: 0 })
+            } else if (item.type === 'coinbag') {
+              setCoinsCount((n) => n + 5)
+              setScore((n) => n + 5)
+              setTotalScore((n) => n + 5)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: '+5 🪙', color: '#fbbf24', age: 0 })
+            } else if (item.type === 'lightning') {
+              s.lightningFrames = LIGHTNING_DURATION
+              setLightningTime(LIGHTNING_DURATION)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'BLITZ!', color: '#fde047', age: 0 })
             }
           }
         }
@@ -548,12 +632,32 @@ export default function Game({ onExit }) {
         s.featherFrames -= 1
         setFeatherTime(s.featherFrames)
       }
+      // Magnet-Timer
+      if (s.magnetFrames > 0) {
+        s.magnetFrames -= 1
+        setMagnetTime(s.magnetFrames)
+      }
+      // Freeze-Timer
+      if (s.freezeFrames > 0) {
+        s.freezeFrames -= 1
+        setFreezeTime(s.freezeFrames)
+      }
+      // Blitz-Timer
+      if (s.lightningFrames > 0) {
+        s.lightningFrames -= 1
+        setLightningTime(s.lightningFrames)
+      }
+      // Bomben-Blitz Animation
+      if (s.bombFlashFrames > 0) {
+        s.bombFlashFrames -= 1
+        setBombFlash(s.bombFlashFrames)
+      }
 
       // Schiessen
       if (s.shootCooldown > 0) s.shootCooldown -= 1
       const shootKey = keys['x'] || keys['X'] || keys['Shift']
       if (shootKey && s.shootCooldown === 0 && s.power) {
-        s.shootCooldown = SHOOT_COOLDOWN
+        s.shootCooldown = s.lightningFrames > 0 ? Math.max(6, Math.floor(SHOOT_COOLDOWN / 2)) : SHOOT_COOLDOWN
         s.projectiles.push({
           type: s.power,
           x: p.x + (p.facing > 0 ? PLAYER_W : -PROJECTILE_SIZE),
@@ -561,6 +665,16 @@ export default function Game({ onExit }) {
           vx: PROJECTILE_SPEED * p.facing,
           life: 90,
         })
+        // Blitz: zusätzliches Geschoss leicht versetzt für Doppelschuss-Effekt
+        if (s.lightningFrames > 0) {
+          s.projectiles.push({
+            type: s.power,
+            x: p.x + (p.facing > 0 ? PLAYER_W : -PROJECTILE_SIZE),
+            y: p.y + 28,
+            vx: PROJECTILE_SPEED * p.facing,
+            life: 90,
+          })
+        }
       }
 
       // Projektile bewegen + Kollision
@@ -614,8 +728,11 @@ export default function Game({ onExit }) {
       s.floatingTexts = s.floatingTexts.filter((ft) => ft.age < 50)
 
       // Feinde bewegen + Kollision + Schiess-AI
+      const frozen = s.freezeFrames > 0
       for (const e of s.enemies) {
-        if (e.type === 'bat') {
+        if (frozen) {
+          // Eingefroren: Bewegung pausiert, Schiess-Timer pausiert — überspringen
+        } else if (e.type === 'bat') {
           // Fledermäuse fliegen seitlich + auf/ab
           e.x += e.dir * 1.6
           if (e.x > e.startX + e.range) e.dir = -1
@@ -744,11 +861,13 @@ export default function Game({ onExit }) {
       }
       s.enemies = s.enemies.filter((e) => !e.dead)
 
-      // Gegner-Projektile bewegen + Kollision
+      // Gegner-Projektile bewegen + Kollision (eingefroren wenn Uhr aktiv)
       for (const ep of s.enemyProjectiles) {
-        ep.x += ep.vx
-        ep.y += ep.vy
-        ep.life -= 1
+        if (!frozen) {
+          ep.x += ep.vx
+          ep.y += ep.vy
+          ep.life -= 1
+        }
         const epr = { x: ep.x, y: ep.y, w: 24, h: 24 }
 
         // Treffer auf Spieler
@@ -918,7 +1037,7 @@ export default function Game({ onExit }) {
               <>
                 <div className="rotate-emoji">📱↻</div>
                 <h2>Bitte dreh dein Handy!</h2>
-                <p>Das Spiel macht im Querformat mehr Spass. 🐱</p>
+                <p>Das Spiel macht im Querformat mehr Spass. {character}</p>
                 <button className="big-btn rotate-go-btn" onClick={startCountdown}>
                   Bereit! 🚀
                 </button>
@@ -960,6 +1079,21 @@ export default function Game({ onExit }) {
             🧙🛡️ Hexer-Schild: {bombShield}
           </div>
         )}
+        {magnetTime > 0 && (
+          <div className="hud-item power-badge magnet-badge">
+            🧲 Magnet! {Math.ceil(magnetTime / 60)}s
+          </div>
+        )}
+        {freezeTime > 0 && (
+          <div className="hud-item power-badge freeze-badge">
+            ⏰ Zeit-Stopp! {Math.ceil(freezeTime / 60)}s
+          </div>
+        )}
+        {lightningTime > 0 && (
+          <div className="hud-item power-badge lightning-badge">
+            ⚡ Blitz! {Math.ceil(lightningTime / 60)}s
+          </div>
+        )}
         {featherTime > 0 && (
           <div className="hud-item power-badge feather-badge">
             🪶 Schweben! {Math.ceil(featherTime / 60)}s (⬆️ halten)
@@ -979,6 +1113,9 @@ export default function Game({ onExit }) {
         className="viewport"
         style={{ width: VIEW_W, height: VIEW_H, background: level.bgColor }}
       >
+        {bombFlash > 0 && (
+          <div className="bomb-flash" style={{ opacity: bombFlash / 24 }} />
+        )}
         <div
           className="world"
           style={{
@@ -1078,7 +1215,7 @@ export default function Game({ onExit }) {
           {s.enemies.map((e, i) => (
             <div
               key={`e${i}`}
-              className={`enemy enemy-${e.type}`}
+              className={`enemy enemy-${e.type} ${s.freezeFrames > 0 ? 'frozen' : ''}`}
               style={{
                 left: e.x,
                 top: e.y,
@@ -1149,7 +1286,7 @@ export default function Game({ onExit }) {
               transform: `scaleX(${p.facing})`,
             }}
           >
-            🐱
+            {character}
           </div>
           {p.slamming && (
             <div

@@ -2,38 +2,70 @@ import { useState } from 'react'
 import Game from './Game'
 import './App.css'
 
+const CHARACTERS = [
+  { emoji: '🐈', name: 'Katze' },
+  { emoji: '🐕', name: 'Hund' },
+  { emoji: '🐇', name: 'Hase' },
+  { emoji: '🐢', name: 'Schildkröte' },
+  { emoji: '🐅', name: 'Tiger' },
+  { emoji: '🦄', name: 'Einhorn' },
+  { emoji: '🦔', name: 'Igel' },
+  { emoji: '🦘', name: 'Känguru' },
+  { emoji: '🐘', name: 'Elefant' },
+  { emoji: '🐎', name: 'Pferd' },
+  { emoji: '🦒', name: 'Giraffe' },
+  { emoji: '🐒', name: 'Affe' },
+]
+
 function App() {
   const [view, setView] = useState('home') // home | game
+  const [character, setCharacter] = useState('🐈')
 
   if (view === 'game') {
-    return <Game onExit={() => setView('home')} />
+    return <Game onExit={() => setView('home')} character={character} />
   }
 
   return (
     <div className="app">
       <header className="header">
-        <h1>🐱 Alysas Hüpf-Abenteuer</h1>
+        <h1>{character} Alysas Hüpf-Abenteuer</h1>
         <p className="untertitel">Lauf, springe und sammle Sterne!</p>
       </header>
 
       <main className="main">
         <div className="karte">
+          <h2>🐾 Wähle deinen Charakter</h2>
+          <div className="character-grid">
+            {CHARACTERS.map((c) => (
+              <button
+                key={c.emoji}
+                className={`character-btn ${character === c.emoji ? 'selected' : ''}`}
+                onClick={() => setCharacter(c.emoji)}
+              >
+                <span className="character-emoji">{c.emoji}</span>
+                <span className="character-name">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="karte">
           <h2>🎮 So spielst du</h2>
           <ul className="ideen">
             <li>⬅️ ➡️ <strong>Pfeiltasten</strong> zum Laufen</li>
-            <li>⬆️ <strong>Pfeil hoch</strong> oder <strong>Leertaste</strong> — kann <strong>2× springen</strong>! 💫</li>
-            <li>⬇️ In der Luft <strong>Pfeil runter</strong> = Bodenstoss 💥</li>
-            <li>❓ Springe von unten gegen Fragezeichen-Blöcke — oder Bodenstoss von oben!</li>
+            <li>⬆️ <strong>Sprung</strong> · <strong>2× springen</strong> für Doppelsprung! 💫</li>
+            <li>⬇️ In der Luft = Bodenstoss 💥 (knackt Blöcke von oben)</li>
+            <li>❓ Springe von unten gegen Fragezeichen-Blöcke!</li>
             <li>🔥❄️ Feuer/Eis sammeln, dann <strong>X</strong> zum Schiessen!</li>
-            <li>🌈 Regenbogen = unverwundbar · 🛡️ Schild = blockt 1 Treffer · 🪶 Feder = <strong>nach vorne schweben</strong> (Sprung halten!)</li>
-            <li>👑 Krone = +10 Punkte · 🪙 Münzen sammeln</li>
-            <li>⭐ Sterne · 💎 Diamanten · ❤️ Herzen</li>
+            <li>🌈 Regenbogen · 🛡️ Schild · 🧿 Hexer-Schild · 🪶 Feder = schweben</li>
+            <li>🧲 Magnet · 💣 Bombe · ⏰ Zeit-Stopp · 💰 Geld · ⚡ Blitz</li>
+            <li>👑 Krone = +10 · 🪙 Münzen · ⭐ Sterne · 💎 Diamanten · ❤️ Herzen</li>
             <li>🚩 Erreiche die Flagge am Ende</li>
           </ul>
         </div>
 
         <div className="karte test-karte">
-          <h2>Bereit?</h2>
+          <h2>Bereit, {CHARACTERS.find((c) => c.emoji === character)?.name}?</h2>
           <button className="knopf" onClick={() => setView('game')}>
             🎮 Spiel starten!
           </button>
@@ -41,7 +73,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Viel Spass! Sag mir, wenn du etwas ändern möchtest. 💡</p>
+        <p>100 Levels · 12 Charaktere · Viel Spass! 💡</p>
       </footer>
     </div>
   )

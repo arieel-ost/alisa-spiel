@@ -4,6 +4,7 @@
 //
 // Items in Blöcken: 'diamond' 💎, 'heart' ❤️, 'mushroom' 🍄, 'fire' 🔥, 'ice' ❄️,
 //                    'rainbow' 🌈, 'shield' 🛡️, 'wizardshield' 🧿, 'feather' 🪶, 'crown' 👑
+//                    'magnet' 🧲, 'bomb' 💣, 'clock' ⏰, 'coinbag' 💰, 'lightning' ⚡
 // Gegner: 'monster' 👾, 'bug' 🐛, 'bat' 🦇, 'wizard' 🧙, 'ghost' 👻, 'dragon' 🐉
 
 const THEMES = [
@@ -89,6 +90,11 @@ const ITEM_POOL = [
   'rainbow',
   'crown',
   'heart', 'heart',
+  'magnet', 'magnet',
+  'bomb',
+  'clock',
+  'coinbag', 'coinbag',
+  'lightning',
 ]
 
 function generateLevel(index) {
