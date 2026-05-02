@@ -15,6 +15,7 @@ const CHARACTERS = [
   { emoji: '🐎', name: 'Pferd' },
   { emoji: '🦒', name: 'Giraffe' },
   { emoji: '🐒', name: 'Affe' },
+  { emoji: '🦜', name: 'Niki', goofy: true },
 ]
 
 function App() {
@@ -39,10 +40,10 @@ function App() {
             {CHARACTERS.map((c) => (
               <button
                 key={c.emoji}
-                className={`character-btn ${character === c.emoji ? 'selected' : ''}`}
+                className={`character-btn ${character === c.emoji ? 'selected' : ''} ${c.goofy ? 'goofy' : ''}`}
                 onClick={() => setCharacter(c.emoji)}
               >
-                <span className="character-emoji">{c.emoji}</span>
+                <span className="character-emoji">{c.emoji}{c.goofy && <span className="fart-mini">💨</span>}</span>
                 <span className="character-name">{c.name}</span>
               </button>
             ))}

@@ -150,6 +150,8 @@ export default function Game({ onExit, character = '🐈' }) {
       freezeFrames: 0,
       lightningFrames: 0,
       bombFlashFrames: 0,
+      fartClouds: [],
+      fartTimer: 60,
       floatingTexts: [],
       landFlashFrames: 0,
       lastOnGround: true,
@@ -727,6 +729,42 @@ export default function Game({ onExit, character = '🐈' }) {
       }
       s.floatingTexts = s.floatingTexts.filter((ft) => ft.age < 50)
 
+      // Niki der Pupsende Papagei: Pups-Wolken + ab und zu "PUPS!" Text
+      if (character === '🦜') {
+        s.fartTimer -= 1
+        if (s.fartTimer <= 0) {
+          const offsetX = p.facing > 0 ? -16 : PLAYER_W
+          s.fartClouds.push({
+            x: p.x + offsetX,
+            y: p.y + 20,
+            vx: -p.facing * 1.4,
+            vy: -0.6,
+            scale: 0.7 + Math.random() * 0.6,
+            life: 60,
+            age: 0,
+          })
+          // jeder 4. Pups: PUPS!-Text
+          if (Math.random() < 0.25) {
+            s.floatingTexts.push({
+              x: p.x + offsetX,
+              y: p.y + 5,
+              text: 'PUPS!',
+              color: '#a3e635',
+              age: 0,
+            })
+          }
+          s.fartTimer = 70 + Math.floor(Math.random() * 80)
+        }
+        for (const f of s.fartClouds) {
+          f.x += f.vx
+          f.y += f.vy
+          f.vy += 0.04
+          f.age += 1
+          f.life -= 1
+        }
+        s.fartClouds = s.fartClouds.filter((f) => f.life > 0)
+      }
+
       // Feinde bewegen + Kollision + Schiess-AI
       const frozen = s.freezeFrames > 0
       for (const e of s.enemies) {
@@ -1266,28 +1304,65 @@ export default function Game({ onExit, character = '🐈' }) {
             />
           )}
 
-          {/* Spieler */}
+          {/* Schatten unter dem Spieler */}
           <div
-            className={[
-              'player',
-              p.invincibleFrames > 0 && 'hurt',
-              s.superJumpFrames > 0 && 'powered',
-              s.power && `power-${s.power}`,
-              p.spinFrames > 0 && 'spin',
-              p.slamming && 'slam',
-              s.rainbowFrames > 0 && 'rainbow',
-              s.shield && 'has-shield',
-              s.featherFrames > 0 && 'flying',
-              s.landFlashFrames > 0 && 'landed',
-            ].filter(Boolean).join(' ')}
+            className="player-shadow"
             style={{
-              left: p.x,
-              top: p.y,
-              transform: `scaleX(${p.facing})`,
+              left: p.x + PLAYER_W / 2 - 18,
+              top: GROUND_Y - 4,
+              opacity: p.onGround ? 0.5 : Math.max(0.15, 0.5 - (GROUND_Y - p.y - PLAYER_H) / 400),
             }}
-          >
-            {character}
-          </div>
+          />
+
+          {/* Pups-Wolken (Niki) */}
+          {s.fartClouds && s.fartClouds.map((f, i) => (
+            <div
+              key={`fc${i}`}
+              className="fart-cloud"
+              style={{
+                left: f.x,
+                top: f.y,
+                opacity: Math.max(0, f.life / 60),
+                transform: `scale(${f.scale + f.age / 100})`,
+              }}
+            >
+              💨
+            </div>
+          ))}
+
+          {/* Spieler */}
+          {(() => {
+            const isNiki = character === '🦜'
+            const nikiWobble = isNiki ? Math.sin(Date.now() / 90) * 10 : 0
+            const idleBob = !isNiki && p.onGround && p.vx === 0 ? Math.sin(Date.now() / 400) * 0.04 : 0
+            const runBob = p.onGround && p.vx !== 0 ? Math.sin(Date.now() / 80) * 0.06 : 0
+            const scaleY = 1 + idleBob - Math.abs(runBob)
+            const scaleX = (1 + Math.abs(runBob) * 0.5) * p.facing
+            return (
+              <div
+                className={[
+                  'player',
+                  isNiki && 'niki',
+                  p.invincibleFrames > 0 && 'hurt',
+                  s.superJumpFrames > 0 && 'powered',
+                  s.power && `power-${s.power}`,
+                  p.spinFrames > 0 && 'spin',
+                  p.slamming && 'slam',
+                  s.rainbowFrames > 0 && 'rainbow',
+                  s.shield && 'has-shield',
+                  s.featherFrames > 0 && 'flying',
+                  s.landFlashFrames > 0 && 'landed',
+                ].filter(Boolean).join(' ')}
+                style={{
+                  left: p.x,
+                  top: p.y,
+                  transform: `scaleX(${scaleX}) scaleY(${scaleY}) rotate(${nikiWobble}deg)`,
+                }}
+              >
+                {character}
+              </div>
+            )
+          })()}
           {p.slamming && (
             <div
               className="slam-trail"

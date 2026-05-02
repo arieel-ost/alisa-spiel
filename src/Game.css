@@ -953,8 +953,35 @@
   align-items: center;
   justify-content: center;
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
-  transition: transform 0.05s;
+  transition: filter 0.1s;
   image-rendering: pixelated;
+}
+
+.player-shadow {
+  position: absolute;
+  width: 36px;
+  height: 8px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6), transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.1s linear;
+}
+
+.fart-cloud {
+  position: absolute;
+  font-size: 22px;
+  pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 0 4px rgba(163, 230, 53, 0.6));
+  transition: opacity 0.1s linear;
+}
+
+.player.niki {
+  filter:
+    drop-shadow(0 0 8px rgba(163, 230, 53, 0.6))
+    drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3))
+    saturate(1.4);
 }
 
 .player.hurt {

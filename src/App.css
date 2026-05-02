@@ -147,6 +147,40 @@
   color: #2a1a4a;
 }
 
+.character-btn.goofy {
+  background: linear-gradient(135deg, #ecfccb 0%, #fef9c3 100%);
+  border-color: #84cc16;
+  animation: goofyWiggle 0.6s ease-in-out infinite alternate;
+}
+
+.character-btn.goofy.selected {
+  border-color: #65a30d;
+  box-shadow: 0 0 0 3px #84cc16, 0 6px 0 #3f6212;
+}
+
+.character-btn.goofy .character-emoji {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.fart-mini {
+  font-size: 1.2rem;
+  animation: fartPuff 1.2s ease-in-out infinite;
+}
+
+@keyframes goofyWiggle {
+  from { transform: rotate(-2deg) translateY(0); }
+  to   { transform: rotate(2deg) translateY(-2px); }
+}
+
+@keyframes fartPuff {
+  0%   { transform: translate(0, 0) scale(0.8); opacity: 1; }
+  60%  { transform: translate(8px, -10px) scale(1.4); opacity: 0.7; }
+  100% { transform: translate(14px, -16px) scale(0.6); opacity: 0; }
+}
+
 .footer {
   margin-top: 3rem;
   text-align: center;
