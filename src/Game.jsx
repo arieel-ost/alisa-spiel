@@ -1064,6 +1064,14 @@ export default function Game({ onExit }) {
             </div>
           ))}
 
+          {/* Hexer-Schild Blase (vor dem Spieler gezeichnet, damit die Katze obenauf bleibt) */}
+          {s.bombShield > 0 && (
+            <div
+              className="bombshield-bubble"
+              style={{ left: p.x - 14, top: p.y - 14 }}
+            />
+          )}
+
           {/* Spieler */}
           <div
             className={[
@@ -1075,7 +1083,6 @@ export default function Game({ onExit }) {
               p.slamming && 'slam',
               s.rainbowFrames > 0 && 'rainbow',
               s.shield && 'has-shield',
-              s.bombShield > 0 && 'has-bombshield',
               s.featherFrames > 0 && 'flying',
             ].filter(Boolean).join(' ')}
             style={{
