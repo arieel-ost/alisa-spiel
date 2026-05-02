@@ -771,8 +771,14 @@ export default function Game({ onExit }) {
   const toggleFullscreen = () => {
     const el = wrapperRef.current || document.documentElement
     if (!document.fullscreenElement) {
-      el.requestFullscreen?.().catch(() => {})
+      el.requestFullscreen?.()
+        .then(() => {
+          // Auf Handy ins Querformat zwingen, falls möglich
+          screen.orientation?.lock?.('landscape').catch(() => {})
+        })
+        .catch(() => {})
     } else {
+      screen.orientation?.unlock?.()
       document.exitFullscreen?.()
     }
   }
@@ -804,6 +810,13 @@ export default function Game({ onExit }) {
 
   return (
     <div className="game-wrapper" ref={wrapperRef}>
+      <div className="rotate-overlay">
+        <div className="rotate-card">
+          <div className="rotate-emoji">📱↻</div>
+          <h2>Bitte dreh dein Handy!</h2>
+          <p>Das Spiel macht im Querformat mehr Spass. 🐱</p>
+        </div>
+      </div>
       <div className="hud">
         <div className="hud-item">🎯 Level {levelIndex + 1}: {level.name}</div>
         <div className="hud-item">⭐ {stars} / {level.stars.length}</div>
@@ -1027,7 +1040,7 @@ export default function Game({ onExit }) {
         </div>
         <div className="touch-pad-right">
           <button className="touch-btn touch-shoot" {...touchProps('x')}>🔥</button>
-          <button className="touch-btn touch-down" {...touchProps('ArrowDown')}>💥</button>
+          <button className="touch-btn touch-down" {...touchProps('ArrowDown')}>⬇️</button>
           <button className="touch-btn touch-jump" {...touchProps('ArrowUp')}>⬆️</button>
         </div>
       </div>

@@ -181,6 +181,61 @@
   .hud { font-size: 0.75rem; padding: 0.3rem 0.5rem; }
 }
 
+/* "Bitte Handy drehen" Overlay — nur im Hochformat auf kleinen Geräten */
+.rotate-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #fef3ff 0%, #e0f2fe 50%, #fef9c3 100%);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.rotate-card {
+  background: white;
+  border-radius: 24px;
+  padding: 2rem;
+  border: 4px solid #ffe1f0;
+  box-shadow: 0 12px 40px rgba(120, 115, 245, 0.3);
+  max-width: 90vw;
+}
+
+.rotate-emoji {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+  animation: rotateNudge 1.6s ease-in-out infinite;
+}
+
+@keyframes rotateNudge {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-90deg); }
+}
+
+.rotate-card h2 {
+  margin: 0 0 0.5rem;
+  color: #c026d3;
+  font-size: 1.5rem;
+}
+
+.rotate-card p {
+  margin: 0;
+  color: #5b21b6;
+  font-size: 1rem;
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .rotate-overlay { display: flex; }
+  /* Spielinhalte verstecken, damit nur das Overlay sichtbar ist */
+  .game-wrapper > .hud,
+  .game-wrapper > .viewport-wrapper,
+  .game-wrapper > .touch-controls,
+  .game-wrapper > .controls-hint,
+  .game-wrapper > .overlay { visibility: hidden; }
+}
+
 .viewport {
   position: relative;
   overflow: hidden;
