@@ -1192,6 +1192,19 @@ export default function Game({ onExit }) {
           <button className="touch-btn touch-arrow" {...touchProps('ArrowLeft')}>◀</button>
           <button className="touch-btn touch-arrow" {...touchProps('ArrowRight')}>▶</button>
         </div>
+        <div className="touch-pad-center">
+          <button
+            className={`touch-btn touch-wizshield ${bombShield > 0 ? 'active' : ''}`}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              if (stateRef.current) stateRef.current.bombShield = 3
+              setBombShield(3)
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            🧿{bombShield > 0 && <span className="touch-badge">{bombShield}</span>}
+          </button>
+        </div>
         <div className="touch-pad-right">
           <button className="touch-btn touch-shoot" {...touchProps('x')}>🔥</button>
           <button className="touch-btn touch-down" {...touchProps('ArrowDown')}>⬇️</button>

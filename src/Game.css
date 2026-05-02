@@ -161,6 +161,46 @@
   color: white;
 }
 
+.touch-pad-center {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-end;
+}
+
+.touch-wizshield {
+  position: relative;
+  background: rgba(236, 72, 153, 0.9);
+  border-color: #831843;
+  color: white;
+  font-size: 28px;
+}
+
+.touch-wizshield.active {
+  background: linear-gradient(135deg, #ec4899, #a855f7);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.6),
+    0 0 16px rgba(236, 72, 153, 0.7),
+    0 4px 0 rgba(131, 24, 67, 0.6);
+  animation: pulse 0.7s ease-in-out infinite alternate;
+}
+
+.touch-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  color: #831843;
+  border: 2px solid #831843;
+  font-family: 'Silkscreen', monospace;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (pointer: coarse), (max-width: 900px) {
   .touch-controls { display: flex; }
   .controls-hint { display: none; }
