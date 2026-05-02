@@ -647,6 +647,16 @@ export default function Game({ onExit }) {
             setTotalScore((n) => n + 2)
             continue
           }
+          // Hexer-Schild fängt auch Hexer-Berührung ab (kostet 1 Ladung)
+          if (e.type === 'wizard' && s.bombShield > 0 && p.invincibleFrames === 0) {
+            s.bombShield -= 1
+            setBombShield(s.bombShield)
+            p.invincibleFrames = 30
+            // sanfter Rückstoss, ohne Schaden
+            p.vx = (p.x < e.x ? -1 : 1) * 4
+            p.vy = -6
+            continue
+          }
           // Drauf-Springen besiegt JEDEN Gegner (auch Geister, Hexer, Drachen, Fledermäuse)
           if (p.vy > 2 && p.y + PLAYER_H - p.vy <= e.y + 6) {
             e.dead = true
@@ -1065,6 +1075,7 @@ export default function Game({ onExit }) {
               p.slamming && 'slam',
               s.rainbowFrames > 0 && 'rainbow',
               s.shield && 'has-shield',
+              s.bombShield > 0 && 'has-bombshield',
               s.featherFrames > 0 && 'flying',
             ].filter(Boolean).join(' ')}
             style={{
@@ -1080,6 +1091,15 @@ export default function Game({ onExit }) {
               className="slam-trail"
               style={{ left: p.x, top: p.y + PLAYER_H, width: PLAYER_W }}
             />
+          )}
+
+          {s.bombShield > 0 && (
+            <div
+              className="bombshield-count"
+              style={{ left: p.x + PLAYER_W / 2 - 14, top: p.y - 22 }}
+            >
+              {s.bombShield}
+            </div>
           )}
         </div>
       </div>
