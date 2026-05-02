@@ -181,9 +181,9 @@
   .hud { font-size: 0.75rem; padding: 0.3rem 0.5rem; }
 }
 
-/* "Bitte Handy drehen" Overlay — nur im Hochformat auf kleinen Geräten */
+/* "Bitte Handy drehen" Overlay — wird nur einmal beim Start gezeigt und vom User weggetippt */
 .rotate-overlay {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
   background: linear-gradient(135deg, #fef3ff 0%, #e0f2fe 50%, #fef9c3 100%);
@@ -226,14 +226,24 @@
   font-size: 1rem;
 }
 
-@media (orientation: portrait) and (max-width: 900px) {
-  .rotate-overlay { display: flex; }
-  /* Spielinhalte verstecken, damit nur das Overlay sichtbar ist */
-  .game-wrapper > .hud,
-  .game-wrapper > .viewport-wrapper,
-  .game-wrapper > .touch-controls,
-  .game-wrapper > .controls-hint,
-  .game-wrapper > .overlay { visibility: hidden; }
+.rotate-go-btn {
+  margin-top: 1.2rem;
+  font-size: 1.4rem;
+  padding: 1rem 2.5rem;
+}
+
+.countdown {
+  font-size: 8rem;
+  font-weight: bold;
+  color: #c026d3;
+  text-shadow: 4px 4px 0 #ffe1f0, 6px 6px 0 rgba(192, 38, 211, 0.3);
+  animation: countdownPop 0.7s ease-out;
+}
+
+@keyframes countdownPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  40%  { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .viewport {

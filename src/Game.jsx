@@ -86,6 +86,12 @@ export default function Game({ onExit }) {
   const animRef = useRef(null)
   const wrapperRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [rotateGate, setRotateGate] = useState(() => {
+    // Beim Start prüfen: Touchscreen / kleines Display?
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(pointer: coarse), (max-width: 900px)').matches
+  })
+  const [countdown, setCountdown] = useState(0)
 
   // Initialisiere Level
   useEffect(() => {
@@ -768,6 +774,22 @@ export default function Game({ onExit }) {
     setResetTrigger((t) => t + 1)
   }
 
+  const startCountdown = () => {
+    let n = 3
+    setCountdown(n)
+    const tick = () => {
+      n -= 1
+      if (n <= 0) {
+        setCountdown(0)
+        setRotateGate(false)
+      } else {
+        setCountdown(n)
+        setTimeout(tick, 700)
+      }
+    }
+    setTimeout(tick, 700)
+  }
+
   const toggleFullscreen = () => {
     const el = wrapperRef.current || document.documentElement
     if (!document.fullscreenElement) {
@@ -810,13 +832,24 @@ export default function Game({ onExit }) {
 
   return (
     <div className="game-wrapper" ref={wrapperRef}>
-      <div className="rotate-overlay">
-        <div className="rotate-card">
-          <div className="rotate-emoji">📱↻</div>
-          <h2>Bitte dreh dein Handy!</h2>
-          <p>Das Spiel macht im Querformat mehr Spass. 🐱</p>
+      {rotateGate && (
+        <div className="rotate-overlay">
+          <div className="rotate-card">
+            {countdown === 0 ? (
+              <>
+                <div className="rotate-emoji">📱↻</div>
+                <h2>Bitte dreh dein Handy!</h2>
+                <p>Das Spiel macht im Querformat mehr Spass. 🐱</p>
+                <button className="big-btn rotate-go-btn" onClick={startCountdown}>
+                  Bereit! 🚀
+                </button>
+              </>
+            ) : (
+              <div className="countdown">{countdown}</div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       <div className="hud">
         <div className="hud-item">🎯 Level {levelIndex + 1}: {level.name}</div>
         <div className="hud-item">⭐ {stars} / {level.stars.length}</div>
