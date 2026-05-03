@@ -465,6 +465,22 @@ function generateLevel(index) {
     enemies.push(enemy)
   }
 
+  // Mario-Style Hindernisse am Boden (Röhren, Mauern, Felsen) — solid, drüberspringen
+  const obstacles = []
+  const numObstacles = Math.min(6, 2 + Math.floor(difficulty * 0.3))
+  const obstZone = width - 600
+  const obstGap = obstZone / Math.max(1, numObstacles)
+  const OBSTACLE_TYPES = ['pipe', 'brick', 'stone']
+  for (let i = 0; i < numObstacles; i++) {
+    const baseX = Math.floor(300 + i * obstGap + rng() * (obstGap * 0.4))
+    const type = OBSTACLE_TYPES[Math.floor(rng() * OBSTACLE_TYPES.length)]
+    let w, h
+    if (type === 'pipe') { w = 50; h = 50 + Math.floor(rng() * 50) }       // 50–100 hoch
+    else if (type === 'brick') { w = 60 + Math.floor(rng() * 60); h = 30 } // breite niedrige Mauer
+    else { w = 50 + Math.floor(rng() * 30); h = 40 + Math.floor(rng() * 30) } // Felsen variabel
+    obstacles.push({ type, x: baseX, y: 420 - h, w, h })
+  }
+
   // Gefahren-Felder (Lava / Wasser / Säure) — direkt am Boden, überspringbar
   const hazards = []
   if (theme.hazard) {
@@ -493,6 +509,7 @@ function generateLevel(index) {
     blocks,
     enemies,
     hazards,
+    obstacles,
     goal: { x: width - 80, y: 360 },
   }
 }

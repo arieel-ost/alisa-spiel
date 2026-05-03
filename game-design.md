@@ -52,7 +52,11 @@ README.md           Public-facing readme
 - **P:** refill wizard shield to 3 charges
 - **9:** restart current level
 - **A:** skip current level
-- **L:** Lama-Modus (Auto-Play) — Charakter spielt selbst (siehe unten)
+- **M:** Level-Auswahl-Menü öffnen (zeigt freigeschaltete Levels, persistent via localStorage)
+- **L (oder Modus-Touchbutton):** charakter-abhängiger Spezial-Modus
+  - 🦄 Einhorn → **Fliegen-Modus** (Schwerkraft aus, ⬆️/⬇️ steuern Höhe)
+  - 🐒 Alisa (Affe) → **Affen-Modus** (unsterblich)
+  - 🦙 Lama oder andere Charaktere → **Lama-Modus** (Auto-Play, siehe unten)
 
 ### Touch (mobile)
 
@@ -129,6 +133,18 @@ L drücken → toggle. Charakter spielt selbst nach simpler Heuristik (`applyAut
 - Schild-Refill (P), Restart (9), Skip (A) bleiben manuell.
 
 HUD zeigt 🦙 Lama-Modus Badge wenn aktiv. AI ist bewusst simpel — kein Pathfinding, sammelt Items nur "im Vorbeilaufen".
+
+## Mario-Style Hindernisse
+
+`level.obstacles = [{type, x, y, w, h}]` — solid wie Plattformen (Spieler kann drauflanden + Seitenkollision blockt). Generator (Welt 6+) plaziert 2–6 pro Level.
+
+| Type | Optik | Grösse |
+|---|---|---|
+| `pipe` | grüne Mario-Röhre mit Pixel-Kragen oben | 50 × 50–100 |
+| `brick` | braune Backstein-Mauer | 60–120 × 30 |
+| `stone` | grauer Felsen-Brocken | 50–80 × 40–70 |
+
+Lama-AI erkennt obstacles als Wände + Hop-Ziele.
 
 ## Hazards (Gefahren-Felder)
 

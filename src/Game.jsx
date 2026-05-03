@@ -245,7 +245,7 @@ function applyAutoPlay(keys, s, p, level, ai) {
     ? (sxEnd < p.x + 8 && sxEnd > p.x - 90)
     : (sx > p.x + PLAYER_W - 8 && sx < p.x + PLAYER_W + 90)
 
-  for (const solid of level.platforms) {
+  for (const solid of [...level.platforms, ...(level.obstacles || [])]) {
     const sh = solid.h || 20
     const sx = solid.x
     const sxEnd = solid.x + solid.w
@@ -451,9 +451,12 @@ export default function Game({ onExit, character = '🐈' }) {
   const autoPlayRef = useRef(false)
   const aiStateRef = useRef({ framesSinceJump: 99, doubleJumpCooldown: 0 })
   const [autoPlay, setAutoPlay] = useState(false)
-  // Affen-Modus: privater Cheat (R-Taste), Spieler ist unsterblich. Nicht in Steuerungs-Hilfe.
+  // Affen-Modus: Cheat - unsterblich. Aktivierbar mit L wenn Charakter = Affe (Alisa).
   const apeModeRef = useRef(false)
   const [apeMode, setApeMode] = useState(false)
+  // Fliegen-Modus: nur für Einhorn. Schwerkraft aus, ↑↓ steuern Höhe.
+  const flyModeRef = useRef(false)
+  const [flyMode, setFlyMode] = useState(false)
   // Level-Menü: M-Taste öffnet Auswahl der freigeschalteten Levels
   const [menuOpen, setMenuOpen] = useState(false)
   const [maxLevelUnlocked, setMaxLevelUnlocked] = useState(() => {
@@ -637,23 +640,9 @@ export default function Game({ onExit, character = '🐈' }) {
       if (e.key === 'm' || e.key === 'M') {
         setMenuOpen((o) => !o)
       }
-      // R → Affen-Modus (privater Unsterblich-Cheat) toggle
-      if (e.key === 'r' || e.key === 'R') {
-        apeModeRef.current = !apeModeRef.current
-        setApeMode(apeModeRef.current)
-      }
-      // L → Lama-Modus (Auto-Spielen) toggle
+      // L → Charakter-spezifischer Modus: 🦄=Fly, 🐒=Ape, 🦙=Lama, sonst=Lama
       if (e.key === 'l' || e.key === 'L') {
-        autoPlayRef.current = !autoPlayRef.current
-        setAutoPlay(autoPlayRef.current)
-        // Bei Aus: alle gehaltenen AI-Tasten freigeben
-        if (!autoPlayRef.current) {
-          keysRef.current['ArrowRight'] = false
-          keysRef.current['ArrowLeft'] = false
-          keysRef.current[' '] = false
-          keysRef.current['x'] = false
-          keysRef.current['ArrowDown'] = false
-        }
+        triggerCharacterMode()
       }
     }
     const up = (e) => {
@@ -726,8 +715,18 @@ export default function Game({ onExit, character = '🐈' }) {
       }
       s.prevDownKey = downKeyDown
 
-      // Schwerkraft
-      p.vy += GRAVITY
+      // Fliegen-Modus (Einhorn): Schwerkraft aus, ↑↓ steuern Höhe direkt
+      if (flyModeRef.current && character === '🦄') {
+        const upKey = keys['ArrowUp'] || keys[' '] || keys['w'] || keys['W']
+        const downKey = keys['ArrowDown'] || keys['s'] || keys['S']
+        if (upKey) p.vy = -4.5
+        else if (downKey) p.vy = 4.5
+        else p.vy = 0
+        p.onGround = false // beim Fliegen nie als geerdet betrachten
+      } else {
+        // Schwerkraft
+        p.vy += GRAVITY
+      }
 
       // Feder: Gleitflug nach vorne (langsamer Sinkflug + Vorwärtsschub)
       if (s.featherFrames > 0 && jumpKeyDown && !p.onGround && !p.slamming) {
@@ -747,7 +746,7 @@ export default function Game({ onExit, character = '🐈' }) {
       if (p.x < 0) p.x = 0
       if (p.x + PLAYER_W > level.width) p.x = level.width - PLAYER_W
 
-      const solids = [...level.platforms, ...s.blocks]
+      const solids = [...level.platforms, ...s.blocks, ...(level.obstacles || [])]
       for (const plat of solids) {
         const pr = { x: p.x, y: p.y, w: PLAYER_W, h: PLAYER_H }
         if (rectsOverlap(pr, plat)) {
@@ -767,7 +766,7 @@ export default function Game({ onExit, character = '🐈' }) {
         p.onGround = true
       }
 
-      for (const plat of level.platforms) {
+      for (const plat of [...level.platforms, ...(level.obstacles || [])]) {
         const pr = { x: p.x, y: p.y, w: PLAYER_W, h: PLAYER_H }
         if (rectsOverlap(pr, plat)) {
           if (p.vy > 0) {
@@ -937,7 +936,7 @@ export default function Game({ onExit, character = '🐈' }) {
           // Plattformen + Blöcke (nur von oben drauflanden)
           if (!item.settled && item.vy >= 0) {
             const ir2 = { x: item.x, y: item.y, w: ITEM_SIZE, h: ITEM_SIZE }
-            for (const plat of [...level.platforms, ...s.blocks]) {
+            for (const plat of [...level.platforms, ...s.blocks, ...(level.obstacles || [])]) {
               if (rectsOverlap(ir2, plat)) {
                 item.y = plat.y - ITEM_SIZE
                 item.vy = 0
@@ -1110,7 +1109,7 @@ export default function Game({ onExit, character = '🐈' }) {
         const pjr = { x: proj.x, y: proj.y, w: PROJECTILE_SIZE, h: PROJECTILE_SIZE }
 
         // Soliden Hindernissen ausweichen
-        for (const solid of [...level.platforms, ...s.blocks]) {
+        for (const solid of [...level.platforms, ...s.blocks, ...(level.obstacles || [])]) {
           if (rectsOverlap(pjr, solid)) {
             proj.dead = true
             break
@@ -1423,7 +1422,7 @@ export default function Game({ onExit, character = '🐈' }) {
 
         // Soliden Hindernissen ausweichen
         if (!ep.dead) {
-          for (const solid of [...level.platforms, ...s.blocks]) {
+          for (const solid of [...level.platforms, ...s.blocks, ...(level.obstacles || [])]) {
             if (rectsOverlap(epr, solid)) {
               ep.dead = true
               break
@@ -1496,6 +1495,28 @@ export default function Game({ onExit, character = '🐈' }) {
     setScore(0)
     setLives(5)
     setLevelIndex((i) => i + 1)
+  }
+
+  // Modus-Trigger: charakter-abhängiger Spezial-Modus.
+  // 🦄 Einhorn → Fliegen | 🐒 Alisa → Unsterblich | 🦙 Lama → Auto-Play | sonst → Auto-Play
+  const triggerCharacterMode = () => {
+    if (character === '🦄') {
+      flyModeRef.current = !flyModeRef.current
+      setFlyMode(flyModeRef.current)
+    } else if (character === '🐒') {
+      apeModeRef.current = !apeModeRef.current
+      setApeMode(apeModeRef.current)
+    } else {
+      autoPlayRef.current = !autoPlayRef.current
+      setAutoPlay(autoPlayRef.current)
+      if (!autoPlayRef.current) {
+        keysRef.current['ArrowRight'] = false
+        keysRef.current['ArrowLeft'] = false
+        keysRef.current[' '] = false
+        keysRef.current['x'] = false
+        keysRef.current['ArrowDown'] = false
+      }
+    }
   }
 
   const restartLevel = () => {
@@ -1613,6 +1634,9 @@ export default function Game({ onExit, character = '🐈' }) {
         )}
         {apeMode && (
           <div className="hud-item ape-badge">🐵 Affen-Modus · Unsterblich</div>
+        )}
+        {flyMode && (
+          <div className="hud-item fly-badge">🪽 Fliegen! (⬆️/⬇️ steuern)</div>
         )}
         {superJump > 0 && (
           <div className="hud-item super-jump">
@@ -1736,6 +1760,15 @@ export default function Game({ onExit, character = '🐈' }) {
                 width: plat.w,
                 height: plat.h,
               }}
+            />
+          ))}
+
+          {/* Mario-Style Hindernisse: Röhren, Mauern, Felsen */}
+          {(level.obstacles || []).map((obs, i) => (
+            <div
+              key={`obs${i}`}
+              className={`obstacle obstacle-${obs.type}`}
+              style={{ left: obs.x, top: obs.y, width: obs.w, height: obs.h }}
             />
           ))}
 
@@ -1960,6 +1993,15 @@ export default function Game({ onExit, character = '🐈' }) {
             onContextMenu={(e) => e.preventDefault()}
           >
             🧿{bombShield > 0 && <span className="touch-badge">{bombShield}</span>}
+          </button>
+          {/* Modus-Button: charakter-abhängig (Einhorn=Fly, Affe=Ape, sonst=Lama) */}
+          <button
+            className={`touch-btn touch-mode ${flyMode || apeMode || autoPlay ? 'active' : ''}`}
+            onPointerDown={(e) => { e.preventDefault(); triggerCharacterMode() }}
+            onContextMenu={(e) => e.preventDefault()}
+            title="Spezial-Modus"
+          >
+            {character === '🦄' ? '🪽' : character === '🐒' ? '🐵' : '🦙'}
           </button>
         </div>
         <div className="touch-pad-right">
