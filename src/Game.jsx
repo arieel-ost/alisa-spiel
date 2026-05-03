@@ -105,12 +105,15 @@ function rectsOverlap(a, b) {
 function applyAutoPlay(keys, s, p, level, ai) {
   // ----- AI-State pflegen -----
   ai.framesSinceJump = (ai.framesSinceJump || 0) + 1
-  if (p.onGround && Math.abs(p.x - (ai.lastX ?? p.x)) < 0.4) {
+  // Stuck-Detection: zählt nicht hoch wenn AI absichtlich stoppt (Bat-Korridor)
+  const intentionalStop = ai.intentionalStop === true
+  if (!intentionalStop && p.onGround && Math.abs(p.x - (ai.lastX ?? p.x)) < 0.4) {
     ai.stuckFrames = (ai.stuckFrames || 0) + 1
   } else {
     ai.stuckFrames = 0
   }
   ai.lastX = p.x
+  ai.intentionalStop = false // wird unten gesetzt wenn Bat-Korridor aktiv
 
   // ----- Tasten leeren -----
   keys['ArrowLeft'] = false
@@ -207,10 +210,11 @@ function applyAutoPlay(keys, s, p, level, ai) {
         ai.framesSinceJump = 0
       }
     } else if (ai.stuckFrames < 85) {
-      // Phase 2: Kurz rückwärts mit Sprung (Anlauf nehmen)
-      keys['ArrowRight'] = false
-      keys['ArrowLeft'] = goalDx > 0 // sonst andere Richtung
-      keys['ArrowRight'] = goalDx < 0
+      // Phase 2: Kurz rückwärts mit Sprung (Anlauf nehmen).
+      // Default rückwärts gegen die letzte Bewegungsrichtung; falls Goal links
+      // → nach rechts ausweichen, sonst nach links.
+      keys['ArrowRight'] = goalDx <= 0
+      keys['ArrowLeft'] = goalDx > 0
       if (p.onGround && ai.framesSinceJump > 8) {
         keys[' '] = true
         ai.framesSinceJump = 0
@@ -227,35 +231,45 @@ function applyAutoPlay(keys, s, p, level, ai) {
   let stompNow = false
   let blockProjectile = false // Bat/Adler auf Spielerhöhe → kurz anhalten
 
-  // Wände: Plattformen + Blöcke auf Brusthöhe direkt vor Spieler.
-  // ZUSÄTZLICH: niedrige Plattformen (max ~100 px höher) werden als
-  // "Hop-Ziel" erkannt — AI springt drauf, auch wenn der Pfad sonst frei wäre.
-  // Das erlaubt Plattform-Parcours statt nur Boden-Lauf.
-  const lookEnd = p.x + PLAYER_W + 90
+  // Wände: Plattformen + Blöcke auf Brusthöhe IN BEWEGUNGSRICHTUNG.
+  // Symmetrisch links/rechts, basierend auf der Default-Richtung.
+  // ZUSÄTZLICH: niedrige Plattformen als "Hop-Ziele".
+  const movingLeft = keys['ArrowLeft'] === true && keys['ArrowRight'] === false
   const playerFeet = p.y + PLAYER_H
+  // Vorderkante = wo Spieler hinläuft, Suchradius 90 px in Bewegungsrichtung
+  const frontEdge = movingLeft ? p.x : p.x + PLAYER_W
+  const horizCheck = (sx, sxEnd) => movingLeft
+    ? (sxEnd < p.x + 2 && sxEnd > p.x - 90)
+    : (sx > p.x + PLAYER_W - 2 && sx < p.x + PLAYER_W + 90)
+  const hopHorizCheck = (sx, sxEnd) => movingLeft
+    ? (sxEnd < p.x + 8 && sxEnd > p.x - 90)
+    : (sx > p.x + PLAYER_W - 8 && sx < p.x + PLAYER_W + 90)
+
   for (const solid of level.platforms) {
     const sh = solid.h || 20
     const sx = solid.x
     const sxEnd = solid.x + solid.w
     const sy = solid.y
     const syEnd = solid.y + sh
-    if (sxEnd < p.x || sx > lookEnd) continue
-    // Wand: solid in Spieler-Vertikalbereich
-    if (sy < playerFeet - 6 && syEnd > p.y + 4 && sx > p.x + PLAYER_W - 2) {
+    // Bounding-Box-Filter
+    if (sxEnd < p.x - 100 || sx > p.x + PLAYER_W + 100) continue
+    // Wand: solid in Spieler-Vertikalbereich, in Bewegungsrichtung
+    if (sy < playerFeet - 6 && syEnd > p.y + 4 && horizCheck(sx, sxEnd)) {
       needJump = true
       if (syEnd > p.y + 30) needDoubleJump = true
     }
-    // Hop-Ziel: Plattform 30-110 px höher als Spieler-Füsse, vor uns, erreichbar
+    // Hop-Ziel: Plattform 30-110 px höher als Spieler-Füsse, in Bewegungsrichtung
     else if (p.onGround && sy < playerFeet - 30 && sy > playerFeet - 130 &&
-             sx > p.x + PLAYER_W - 8 && sx < p.x + PLAYER_W + 90) {
+             hopHorizCheck(sx, sxEnd)) {
       needJump = true
       if (sy < playerFeet - 90) needDoubleJump = true
     }
   }
   for (const b of s.blocks) {
     if (b.hit) continue
-    if (b.x + BLOCK_SIZE < p.x || b.x > lookEnd) continue
-    if (b.y < playerFeet - 6 && b.y + BLOCK_SIZE > p.y + 4 && b.x > p.x + PLAYER_W - 2) {
+    if (b.x + BLOCK_SIZE < p.x - 100 || b.x > p.x + PLAYER_W + 100) continue
+    if (b.y < playerFeet - 6 && b.y + BLOCK_SIZE > p.y + 4 &&
+        horizCheck(b.x, b.x + BLOCK_SIZE)) {
       needJump = true
       if (b.y + BLOCK_SIZE > p.y + 30) needDoubleJump = true
     }
@@ -289,10 +303,18 @@ function applyAutoPlay(keys, s, p, level, ai) {
         }
       }
 
-      // Fliegende Gegner auf Spielerhöhe ±25 px → STOPP, lass passieren
-      if (!isGround && dx > 0 && dx < 110 && Math.abs(dy) < 25) {
+      // Fliegende Gegner auf Spielerhöhe ±25 px:
+      // statt nur stoppen, kurz rückwärts weichen wenn der Gegner auf uns zukommt
+      if (!isGround && Math.abs(dx) < 110 && Math.abs(dy) < 25) {
         keys['ArrowLeft'] = false
         keys['ArrowRight'] = false
+        ai.intentionalStop = true
+        // Wenn Gegner näher kommt → 1-2 Schritte rückwärts
+        const closing = (dx > 0 && (e.dir || 0) < 0) || (dx < 0 && (e.dir || 0) > 0)
+        if (closing && Math.abs(dx) < 70) {
+          if (dx > 0) keys['ArrowLeft'] = true
+          else keys['ArrowRight'] = true
+        }
         blockProjectile = true
       }
 
@@ -311,23 +333,30 @@ function applyAutoPlay(keys, s, p, level, ai) {
   }
 
   // Projektile-Dodge: 14-Frame-Trajektorie
+  let projectileIncoming = false
   for (const ep of s.enemyProjectiles) {
     const T = 14
     const tx = ep.x + ep.vx * T
-    // Knochen: ep.gravity true, vy steigt um 0.45/Frame → y-Vorhersage
+    // Knochen: ep.gravity true, vy steigt um 0.45/Frame → korrekte Sigma-Formel
     const ty = ep.gravity
-      ? ep.y + ep.vy * T + 0.45 * T * T / 2
+      ? ep.y + ep.vy * T + 0.45 * T * (T + 1) / 2
       : ep.y + ep.vy * T
     if (tx > p.x - 30 && tx < p.x + PLAYER_W + 30 &&
         ty > p.y - 25 && ty < p.y + PLAYER_H + 25) {
       // Kommt von oben? Drunter durchhuschen statt springen
       if (ep.vy > 1.5) {
-        // weiterlaufen, vielleicht ducken (kein duck im Spiel, also einfach weiter)
+        // weiterlaufen
       } else {
         needJump = true
-        if (Math.abs(ep.vx) > 4) needDoubleJump = true
+        projectileIncoming = true
+        if (Math.abs(ep.vx) >= 3) needDoubleJump = true
       }
     }
+  }
+  // Wenn Projektil eintrifft und Spieler bereits in der Luft → Doppelsprung-Ausweich
+  if (projectileIncoming && !p.onGround && p.jumpsLeft > 0 && ai.framesSinceJump > 4) {
+    keys[' '] = true
+    ai.framesSinceJump = 0
   }
 
   // ----- Sprung-Logik -----
@@ -375,12 +404,14 @@ function applyAutoPlay(keys, s, p, level, ai) {
     }
   }
 
-  // ----- Item-Magnet für wertvolle Power-Ups -----
+  // ----- Item-Magnet für wertvolle Power-Ups (nur in Bewegungsrichtung) -----
   const wanted = new Set(['rainbow', 'wizardshield', 'shield', 'heart', 'feather', 'mushroom', 'crown', 'fire', 'ice', 'lightning', 'bomb', 'clock'])
   for (const it of s.items) {
     if (it.taken || !wanted.has(it.type)) continue
     const dx = it.x - p.x
-    if (dx > -20 && dx < 90 && Math.abs(it.y - p.y) < 130) {
+    const dxInDir = movingLeft ? -dx : dx
+    // Item muss vor uns liegen (in Laufrichtung)
+    if (dxInDir > -5 && dxInDir < 90 && Math.abs(it.y - p.y) < 130) {
       // Item höher als Spieler-Kopf → springen
       if (it.y < p.y - 10 && p.onGround && ai.framesSinceJump > 6 && !needDoubleJump) {
         keys[' '] = true
@@ -420,6 +451,9 @@ export default function Game({ onExit, character = '🐈' }) {
   const autoPlayRef = useRef(false)
   const aiStateRef = useRef({ framesSinceJump: 99, doubleJumpCooldown: 0 })
   const [autoPlay, setAutoPlay] = useState(false)
+  // Affen-Modus: privater Cheat (R-Taste), Spieler ist unsterblich. Nicht in Steuerungs-Hilfe.
+  const apeModeRef = useRef(false)
+  const [apeMode, setApeMode] = useState(false)
   const wrapperRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [rotateGate, setRotateGate] = useState(() => {
@@ -581,6 +615,11 @@ export default function Game({ onExit, character = '🐈' }) {
       if (e.key === 'a' || e.key === 'A') {
         skipLevel()
       }
+      // R → Affen-Modus (privater Unsterblich-Cheat) toggle
+      if (e.key === 'r' || e.key === 'R') {
+        apeModeRef.current = !apeModeRef.current
+        setApeMode(apeModeRef.current)
+      }
       // L → Lama-Modus (Auto-Spielen) toggle
       if (e.key === 'l' || e.key === 'L') {
         autoPlayRef.current = !autoPlayRef.current
@@ -618,6 +657,11 @@ export default function Game({ onExit, character = '🐈' }) {
       const s = stateRef.current
       const p = s.player
       const keys = keysRef.current
+
+      // Affen-Modus: privater Cheat — permanent unsterblich
+      if (apeModeRef.current) {
+        p.invincibleFrames = Math.max(p.invincibleFrames, 9999)
+      }
 
       // Lama-Modus: AI schreibt direkt in keys, Edge-Detection greift wie bei Spieler-Eingabe
       if (autoPlayRef.current) {
@@ -1531,6 +1575,9 @@ export default function Game({ onExit, character = '🐈' }) {
         <div className="hud-item">❤️ {lives}</div>
         {autoPlay && (
           <div className="hud-item lama-badge">🦙 Lama-Modus</div>
+        )}
+        {apeMode && (
+          <div className="hud-item ape-badge">🐵 Affen-Modus · Unsterblich</div>
         )}
         {superJump > 0 && (
           <div className="hud-item super-jump">

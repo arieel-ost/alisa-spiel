@@ -44,6 +44,24 @@
   white-space: nowrap;
 }
 
+/* Affen-Modus: voll sichtbares Badge mit pulsierendem Glow */
+.hud-item.ape-badge {
+  background: linear-gradient(180deg, #f97316 0%, #b45309 100%);
+  color: #fffbeb;
+  border: 2px solid #7c2d12;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #422006;
+  box-shadow:
+    0 0 12px rgba(251, 146, 60, 0.8),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+  animation: ape-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes ape-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(251, 146, 60, 0.8), inset 0 -2px 0 rgba(0, 0, 0, 0.3); }
+  50%      { transform: scale(1.08); box-shadow: 0 0 20px rgba(251, 146, 60, 1), inset 0 -2px 0 rgba(0, 0, 0, 0.3); }
+}
+
 .hud-item.lama-badge {
   background: linear-gradient(180deg, #facc15 0%, #f59e0b 100%);
   color: #422006;
