@@ -77,6 +77,12 @@ const ITEM_EMOJI = {
   clock: '⏰',
   coinbag: '💰',
   lightning: '⚡',
+  // Theme-spezifische Items
+  skates: '⛸️',        // Eishöhle: Speed-Boost 12s
+  rocket: '🚀',        // Sterne: Mega-Sprung 12s
+  extinguisher: '🧯',  // Vulkan: Hazards harmlos 15s
+  sword: '🗡️',         // Schloss: Beruhrungs-Tod fur Gegner 12s
+  waterbottle: '💧',   // Wuste: sofort +1 Leben (max 9)
 }
 
 const MAGNET_DURATION = 900 // 15 Sekunden
@@ -446,6 +452,11 @@ export default function Game({ onExit, character = '🐈' }) {
   const [freezeTime, setFreezeTime] = useState(0)
   const [lightningTime, setLightningTime] = useState(0)
   const [bombFlash, setBombFlash] = useState(0)
+  // Theme-Items
+  const [skatesTime, setSkatesTime] = useState(0)         // ⛸️ Speed-Boost
+  const [rocketTime, setRocketTime] = useState(0)         // 🚀 Mega-Sprung
+  const [extinguisherTime, setExtinguisherTime] = useState(0) // 🧯 Hazards harmlos
+  const [swordTime, setSwordTime] = useState(0)           // 🗡️ Beruhrungs-Tod
   const [musicOn, setMusicOn] = useState(false)
   const [status, setStatus] = useState('playing') // playing | won | lost | finished
   const [, force] = useState(0)
@@ -532,6 +543,11 @@ export default function Game({ onExit, character = '🐈' }) {
       magnetFrames: 0,
       freezeFrames: 0,
       lightningFrames: 0,
+      skatesFrames: 0,
+      rocketFrames: 0,
+      extinguisherFrames: 0,
+      swordFrames: 0,
+      fallerTimer: 60,
       bombFlashFrames: 0,
       fartClouds: [],
       fartTimer: 60,
@@ -569,6 +585,10 @@ export default function Game({ onExit, character = '🐈' }) {
     setFreezeTime(0)
     setLightningTime(0)
     setBombFlash(0)
+    setSkatesTime(0)
+    setRocketTime(0)
+    setExtinguisherTime(0)
+    setSwordTime(0)
     force((n) => n + 1)
   }, [levelIndex, resetTrigger])
 
@@ -697,13 +717,15 @@ export default function Game({ onExit, character = '🐈' }) {
       }
 
       // Bewegung links/rechts (gesperrt während Bodenstoss)
+      // Schlittschuhe: 1.6x Speed, wenn aktiv
+      const moveSpd = s.skatesFrames > 0 ? MOVE_SPEED * 1.6 : MOVE_SPEED
       if (p.slamming) {
         p.vx = 0
       } else if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
-        p.vx = -MOVE_SPEED
+        p.vx = -moveSpd
         p.facing = -1
       } else if (keys['ArrowRight'] || keys['d'] || keys['D']) {
-        p.vx = MOVE_SPEED
+        p.vx = moveSpd
         p.facing = 1
       } else {
         p.vx = 0
@@ -712,7 +734,8 @@ export default function Game({ onExit, character = '🐈' }) {
       // Springen (Doppelsprung) — nur bei Tasten-Druck (Edge), nicht beim Halten
       const jumpKeyDown = !!(keys['ArrowUp'] || keys[' '] || keys['w'] || keys['W'])
       if (jumpKeyDown && !s.prevJumpKey && p.jumpsLeft > 0 && !p.slamming) {
-        const power = s.superJumpFrames > 0 ? SUPER_JUMP_POWER : JUMP_POWER
+        // Rakete oder Mushroom > Standard
+        const power = s.rocketFrames > 0 ? 26 : (s.superJumpFrames > 0 ? SUPER_JUMP_POWER : JUMP_POWER)
         p.vy = -power
         p.onGround = false
         p.jumpsLeft -= 1
@@ -975,8 +998,27 @@ export default function Game({ onExit, character = '🐈' }) {
               setTotalScore((n) => n + 3)
               s.floatingTexts.push({ x: item.x, y: item.y, text: '+3', color: '#22d3ee', age: 0 })
             } else if (item.type === 'heart') {
-              setLives((l) => l + 1)
+              setLives((l) => Math.min(9, l + 1))
               s.floatingTexts.push({ x: item.x, y: item.y, text: '+❤️', color: '#f43f5e', age: 0 })
+            } else if (item.type === 'waterbottle') {
+              setLives((l) => Math.min(9, l + 1))
+              s.floatingTexts.push({ x: item.x, y: item.y, text: '+❤️ Wasser!', color: '#38bdf8', age: 0 })
+            } else if (item.type === 'skates') {
+              s.skatesFrames = 720 // 12s
+              setSkatesTime(720)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'SCHLITTSCHUHE!', color: '#bfdbfe', age: 0 })
+            } else if (item.type === 'rocket') {
+              s.rocketFrames = 720 // 12s
+              setRocketTime(720)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'RAKETE!', color: '#a855f7', age: 0 })
+            } else if (item.type === 'extinguisher') {
+              s.extinguisherFrames = 900 // 15s
+              setExtinguisherTime(900)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'LÖSCHER!', color: '#dc2626', age: 0 })
+            } else if (item.type === 'sword') {
+              s.swordFrames = 720 // 12s
+              setSwordTime(720)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'SCHWERT!', color: '#fde047', age: 0 })
             } else if (item.type === 'mushroom') {
               s.superJumpFrames = SUPER_JUMP_DURATION
               setSuperJump(SUPER_JUMP_DURATION)
@@ -1087,6 +1129,26 @@ export default function Game({ onExit, character = '🐈' }) {
       if (s.lightningFrames > 0) {
         s.lightningFrames -= 1
         setLightningTime(s.lightningFrames)
+      }
+      // Schlittschuhe-Timer
+      if (s.skatesFrames > 0) {
+        s.skatesFrames -= 1
+        setSkatesTime(s.skatesFrames)
+      }
+      // Rakete-Timer
+      if (s.rocketFrames > 0) {
+        s.rocketFrames -= 1
+        setRocketTime(s.rocketFrames)
+      }
+      // Feuerlöscher-Timer
+      if (s.extinguisherFrames > 0) {
+        s.extinguisherFrames -= 1
+        setExtinguisherTime(s.extinguisherFrames)
+      }
+      // Schwert-Timer
+      if (s.swordFrames > 0) {
+        s.swordFrames -= 1
+        setSwordTime(s.swordFrames)
       }
       // Bomben-Blitz Animation
       if (s.bombFlashFrames > 0) {
@@ -1405,6 +1467,14 @@ export default function Game({ onExit, character = '🐈' }) {
             setTotalScore((n) => n + 2)
             continue
           }
+          // Schwert-Power: Berührung tötet Gegner sofort (egal welche HP)
+          if (s.swordFrames > 0) {
+            e.dead = true
+            setScore((n) => n + 2)
+            setTotalScore((n) => n + 2)
+            s.floatingTexts.push({ x: e.x, y: e.y, text: '🗡️!', color: '#fde047', age: 0 })
+            continue
+          }
           // Hexer-Schild fängt auch Hexer-Berührung ab (kostet 1 Ladung)
           if (e.type === 'wizard' && s.bombShield > 0 && p.invincibleFrames === 0) {
             s.bombShield -= 1
@@ -1519,8 +1589,8 @@ export default function Game({ onExit, character = '🐈' }) {
       s.enemyProjectiles = s.enemyProjectiles.filter((ep) => !ep.dead)
 
       // Gefahren-Felder (Lava, Wasser, Säure) — sofortiger Tod bei Berührung,
-      // ausser Regenbogen schützt. Schild blockt nicht (sonst zu billig).
-      if (p.invincibleFrames === 0 && s.rainbowFrames === 0) {
+      // ausser Regenbogen oder Feuerlöscher schützt. Schild blockt nicht.
+      if (p.invincibleFrames === 0 && s.rainbowFrames === 0 && s.extinguisherFrames === 0) {
         for (const h of s.hazards) {
           if (rectsOverlap(pr, h)) {
             p.invincibleFrames = 60
@@ -1801,6 +1871,26 @@ export default function Game({ onExit, character = '🐈' }) {
             🪶 Schweben! {Math.ceil(featherTime / 60)}s (⬆️ halten)
           </div>
         )}
+        {skatesTime > 0 && (
+          <div className="hud-item power-badge skates-badge">
+            ⛸️ Schnell! {Math.ceil(skatesTime / 60)}s
+          </div>
+        )}
+        {rocketTime > 0 && (
+          <div className="hud-item power-badge rocket-badge">
+            🚀 Mega-Sprung! {Math.ceil(rocketTime / 60)}s
+          </div>
+        )}
+        {extinguisherTime > 0 && (
+          <div className="hud-item power-badge extinguisher-badge">
+            🧯 Lava-Schutz! {Math.ceil(extinguisherTime / 60)}s
+          </div>
+        )}
+        {swordTime > 0 && (
+          <div className="hud-item power-badge sword-badge">
+            🗡️ Schwert! {Math.ceil(swordTime / 60)}s
+          </div>
+        )}
         <button className="fs-btn" onClick={toggleMusic} title="Musik">
           {musicOn ? '🔊' : '🔇'}
         </button>
@@ -1904,7 +1994,7 @@ export default function Game({ onExit, character = '🐈' }) {
                 height: block.h,
               }}
             >
-              {block.hit ? '' : '?'}
+              {block.hit ? '' : character}
             </div>
           ))}
 
@@ -2063,19 +2153,40 @@ export default function Game({ onExit, character = '🐈' }) {
                 >
                   {character}
                 </div>
-                {/* Animierte Beine — verstecken beim Springen/Slammen/Spin */}
-                {showLegs && (
-                  <>
-                    <div
-                      className={`player-leg leg-l ${isRunning ? 'running' : ''}`}
-                      style={{ left: p.x + 7, top: p.y + PLAYER_H - 6 }}
-                    />
-                    <div
-                      className={`player-leg leg-r ${isRunning ? 'running' : ''}`}
-                      style={{ left: p.x + PLAYER_W - 15, top: p.y + PLAYER_H - 6 }}
-                    />
-                  </>
-                )}
+                {/* Ganzer Körper: 4 Hufe (Trab-Pattern) + Schwanz auf der Rück-Seite */}
+                {showLegs && (() => {
+                  const legY = p.y + PLAYER_H - 4
+                  const tailRight = p.facing > 0 // läuft rechts → Schwanz hinten = links
+                  return (
+                    <>
+                      {/* Schwanz: kleiner gebogener Strich an der hinteren Körperhälfte */}
+                      <div
+                        className={`player-tail ${isRunning ? 'wagging' : ''} ${tailRight ? 'tail-left' : 'tail-right'}`}
+                        style={{
+                          left: tailRight ? p.x - 8 : p.x + PLAYER_W,
+                          top: p.y + PLAYER_H / 2 - 4,
+                        }}
+                      />
+                      {/* 4 Hufe: vorne-aussen, vorne-innen, hinten-innen, hinten-aussen */}
+                      {/* Trab-Pattern: 0+3 (FL+BR) gleichzeitig, 1+2 (FR+BL) gegenphasig */}
+                      {[
+                        { idx: 0, x: p.x + 4 },
+                        { idx: 1, x: p.x + 12 },
+                        { idx: 2, x: p.x + PLAYER_W - 20 },
+                        { idx: 3, x: p.x + PLAYER_W - 12 },
+                      ].map((leg) => {
+                        const phase = (leg.idx === 0 || leg.idx === 3) ? 'phase-a' : 'phase-b'
+                        return (
+                          <div
+                            key={`leg${leg.idx}`}
+                            className={`player-leg ${isRunning ? `running ${phase}` : ''}`}
+                            style={{ left: leg.x, top: legY }}
+                          />
+                        )
+                      })}
+                    </>
+                  )
+                })()}
               </>
             )
           })()}

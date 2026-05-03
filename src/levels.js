@@ -369,6 +369,20 @@ const ITEM_POOL = [
   'lightning',
 ]
 
+// Theme-spezifische Bonus-Items: kommen ZUSÄTZLICH zum Pool, mit höherer
+// Wahrscheinlichkeit (mehrfach gelistet → öfter gewählt).
+const THEME_BONUS_ITEMS = {
+  snow:    ['skates', 'skates', 'skates'],         // Eishöhle: Schlittschuhe
+  sand:    ['waterbottle', 'waterbottle'],         // Wüste: Wasserflasche
+  cave:    ['waterbottle'],                        // Höhle: Wasser hilft auch
+  stars:   ['rocket', 'rocket', 'rocket'],         // Weltraum/Sterne: Rakete
+  rainbow: ['rocket'],
+  lava:    ['extinguisher', 'extinguisher', 'extinguisher'], // Vulkan: Löscher
+  castle:  ['sword', 'sword', 'sword'],            // Schloss: Schwert
+  swamp:   ['sword'],
+  // meadow / clouds / forest / mountains: kein Bonus
+}
+
 function generateLevel(index) {
   // Levels 6-100 → Welten ab Index 0 (also Eishöhle für Level 6-15, etc.)
   const genIdx = index - 6 // 0-basierter generierter Index (0..94)
@@ -419,12 +433,14 @@ function generateLevel(index) {
     }
   }
 
+  // Theme-Bonus-Items mischen (haben hohere Wahrscheinlichkeit per Mehrfachlistung)
+  const themedPool = [...ITEM_POOL, ...(THEME_BONUS_ITEMS[theme.decor] || [])]
   const blocks = []
   const blockGap = (width - 400) / Math.max(1, numBlocks)
   for (let i = 0; i < numBlocks; i++) {
     const x = Math.floor(250 + i * blockGap + rng() * 30)
     const y = Math.floor(110 + rng() * 160)
-    const item = ITEM_POOL[Math.floor(rng() * ITEM_POOL.length)]
+    const item = themedPool[Math.floor(rng() * themedPool.length)]
     blocks.push({ item, x, y })
   }
 

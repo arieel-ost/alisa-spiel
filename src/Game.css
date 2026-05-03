@@ -246,6 +246,42 @@
   background: #dc2626;
 }
 
+/* Theme-Item Badges */
+.hud-item.skates-badge {
+  background: linear-gradient(180deg, #bfdbfe 0%, #2563eb 100%);
+  color: #fff;
+  border: 2px solid #1e40af;
+  text-shadow: 1px 1px 0 #1e3a8a;
+}
+.hud-item.rocket-badge {
+  background: linear-gradient(180deg, #c084fc 0%, #6b21a8 100%);
+  color: #fff;
+  border: 2px solid #fde047;
+  text-shadow: 1px 1px 0 #4c1d95;
+  animation: rocket-pulse 0.6s ease-in-out infinite;
+}
+@keyframes rocket-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(192, 132, 252, 0.5); }
+  50%      { box-shadow: 0 0 16px rgba(253, 224, 71, 0.8); }
+}
+.hud-item.extinguisher-badge {
+  background: linear-gradient(180deg, #fecaca 0%, #b91c1c 100%);
+  color: #fff;
+  border: 2px solid #fde047;
+  text-shadow: 1px 1px 0 #7f1d1d;
+}
+.hud-item.sword-badge {
+  background: linear-gradient(180deg, #fde047 0%, #b45309 100%);
+  color: #fff;
+  border: 2px solid #fef9c3;
+  text-shadow: 1px 1px 0 #78350f;
+  animation: sword-shine 1s ease-in-out infinite;
+}
+@keyframes sword-shine {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.2); }
+}
+
 /* Fliegen-Modus (Einhorn) Badge */
 .hud-item.fly-badge {
   background: linear-gradient(180deg, #ec4899 0%, #a855f7 100%);
@@ -1509,12 +1545,12 @@
   image-rendering: pixelated;
 }
 
-/* Charakter-Beine: zwei kleine Pixel-Stiefel unter dem Spieler.
-   Beim Laufen alternierend hoch-runter (Step-Animation). */
+/* Charakter-Körper: 4 Hufe + Schwanz unter dem Charakter-Emoji.
+   Trab-Pattern: 2 Beine pro Phase (diagonale Paare). */
 .player-leg {
   position: absolute;
-  width: 8px;
-  height: 10px;
+  width: 7px;
+  height: 9px;
   background: linear-gradient(180deg, #44403c 0%, #1c1917 100%);
   border: 1px solid #1c1917;
   border-radius: 2px 2px 4px 4px;
@@ -1524,18 +1560,57 @@
   image-rendering: pixelated;
 }
 
+/* Trab: zwei diagonale Bein-Paare gegenphasig */
 .player-leg.running {
-  animation: leg-step 0.28s steps(2) infinite;
+  animation: leg-trot 0.32s ease-in-out infinite;
+}
+.player-leg.running.phase-b {
+  animation-delay: 0.16s;
 }
 
-.player-leg.leg-r.running {
-  animation-delay: 0.14s;
-}
-
-@keyframes leg-step {
+@keyframes leg-trot {
   0%   { transform: translateY(0); }
-  50%  { transform: translateY(-7px); }
+  50%  { transform: translateY(-6px); }
   100% { transform: translateY(0); }
+}
+
+/* Schwanz: kleiner Pixel-Stummel auf der Rück-Seite, wackelt beim Laufen */
+.player-tail {
+  position: absolute;
+  width: 8px;
+  height: 6px;
+  background: linear-gradient(180deg, #6b21a8 0%, #4c1d95 100%);
+  border: 1px solid #2e1065;
+  border-radius: 4px;
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  image-rendering: pixelated;
+}
+
+.player-tail.tail-left {
+  border-radius: 4px 1px 1px 4px;
+  transform-origin: 100% 50%;
+}
+.player-tail.tail-right {
+  border-radius: 1px 4px 4px 1px;
+  transform-origin: 0% 50%;
+}
+
+.player-tail.wagging.tail-left {
+  animation: tail-wag-left 0.4s ease-in-out infinite;
+}
+.player-tail.wagging.tail-right {
+  animation: tail-wag-right 0.4s ease-in-out infinite;
+}
+
+@keyframes tail-wag-left {
+  0%, 100% { transform: rotate(-12deg); }
+  50%      { transform: rotate(18deg); }
+}
+@keyframes tail-wag-right {
+  0%, 100% { transform: rotate(12deg); }
+  50%      { transform: rotate(-18deg); }
 }
 
 .player-shadow {
