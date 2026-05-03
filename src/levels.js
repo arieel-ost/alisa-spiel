@@ -322,26 +322,26 @@ const HANDCRAFTED = [
 // ----------------------------------------------------------------------
 
 const THEMES = [
-  // Welt 1: Eishöhle (6-15) — moderate
-  { name: 'Eishöhle', decor: 'snow', bgColor: 'linear-gradient(180deg, #0c4a6e 0%, #0ea5e9 50%, #e0f2fe 100%)', enemies: ['bat', 'ghost', 'monster', 'zombie'] },
-  // Welt 2: Wüste (16-25) — Skorpione!
-  { name: 'Wüste', decor: 'sand', bgColor: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%)', enemies: ['bug', 'wizard', 'scorpion', 'dragon'] },
-  // Welt 3: Tiefe Höhle — Skelette!
-  { name: 'Tiefe Höhle', decor: 'cave', bgColor: 'linear-gradient(180deg, #18181b 0%, #3f3f46 50%, #71717a 100%)', enemies: ['bat', 'wizard', 'ghost', 'skeleton'] },
-  // Welt 4: Weltraum — Adler!
-  { name: 'Weltraum', decor: 'stars', bgColor: 'linear-gradient(180deg, #020617 0%, #1e293b 50%, #6366f1 100%)', enemies: ['bat', 'dragon', 'ghost', 'eagle'] },
-  // Welt 5: Regenbogen-Land
-  { name: 'Regenbogen-Land', decor: 'rainbow', bgColor: 'linear-gradient(180deg, #ec4899 0%, #fbbf24 30%, #4ade80 60%, #38bdf8 80%, #a855f7 100%)', enemies: ['dragon', 'wizard', 'ghost', 'eagle', 'scorpion'] },
-  // Welt 6: Vulkan — Oger!
-  { name: 'Vulkan', decor: 'lava', bgColor: 'linear-gradient(180deg, #450a0a 0%, #ef4444 50%, #fbbf24 100%)', enemies: ['dragon', 'wizard', 'ogre', 'skeleton'] },
-  // Welt 7: Schloss-Garten — Zombies!
-  { name: 'Schloss-Garten', decor: 'castle', bgColor: 'linear-gradient(180deg, #6b21a8 0%, #c084fc 60%, #fce7f3 100%)', enemies: ['wizard', 'ghost', 'zombie', 'eagle'] },
-  // Welt 8: Sumpf
-  { name: 'Sumpf', decor: 'swamp', bgColor: 'linear-gradient(180deg, #14532d 0%, #65a30d 50%, #a3e635 100%)', enemies: ['bug', 'zombie', 'wizard', 'skeleton', 'scorpion'] },
-  // Welt 9: Sternenmeer
-  { name: 'Sternenmeer', decor: 'stars', bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #6366f1 50%, #c4b5fd 100%)', enemies: ['ghost', 'dragon', 'eagle', 'skeleton'] },
-  // Welt 10: Endkampf — alles!
-  { name: 'Endkampf', decor: 'lava', bgColor: 'linear-gradient(180deg, #18181b 0%, #ef4444 30%, #f97316 60%, #fde047 100%)', enemies: ['dragon', 'wizard', 'ghost', 'ogre', 'eagle', 'skeleton', 'zombie', 'scorpion'] },
+  // Welt 1: Eishöhle (6-15) — eiskaltes Wasser zwischen Eisplatten
+  { name: 'Eishöhle', decor: 'snow', bgColor: 'linear-gradient(180deg, #0c4a6e 0%, #0ea5e9 50%, #e0f2fe 100%)', enemies: ['bat', 'ghost', 'monster', 'zombie'], hazard: 'water' },
+  // Welt 2: Wüste — keine Gefahr im Boden, nur Skorpione
+  { name: 'Wüste', decor: 'sand', bgColor: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%)', enemies: ['bug', 'wizard', 'scorpion', 'dragon'], hazard: null },
+  // Welt 3: Tiefe Höhle — Lava-Adern!
+  { name: 'Tiefe Höhle', decor: 'cave', bgColor: 'linear-gradient(180deg, #18181b 0%, #3f3f46 50%, #71717a 100%)', enemies: ['bat', 'wizard', 'ghost', 'skeleton'], hazard: 'lava' },
+  // Welt 4: Weltraum — Adler! (kein Boden-Hazard, alles Sterne)
+  { name: 'Weltraum', decor: 'stars', bgColor: 'linear-gradient(180deg, #020617 0%, #1e293b 50%, #6366f1 100%)', enemies: ['bat', 'dragon', 'ghost', 'eagle'], hazard: null },
+  // Welt 5: Regenbogen-Land — fröhlich, keine Gruben
+  { name: 'Regenbogen-Land', decor: 'rainbow', bgColor: 'linear-gradient(180deg, #ec4899 0%, #fbbf24 30%, #4ade80 60%, #38bdf8 80%, #a855f7 100%)', enemies: ['dragon', 'wizard', 'ghost', 'eagle', 'scorpion'], hazard: null },
+  // Welt 6: Vulkan — Lava!
+  { name: 'Vulkan', decor: 'lava', bgColor: 'linear-gradient(180deg, #450a0a 0%, #ef4444 50%, #fbbf24 100%)', enemies: ['dragon', 'wizard', 'ogre', 'skeleton'], hazard: 'lava' },
+  // Welt 7: Schloss-Garten — Burggraben mit Wasser
+  { name: 'Schloss-Garten', decor: 'castle', bgColor: 'linear-gradient(180deg, #6b21a8 0%, #c084fc 60%, #fce7f3 100%)', enemies: ['wizard', 'ghost', 'zombie', 'eagle'], hazard: 'water' },
+  // Welt 8: Sumpf — Säure!
+  { name: 'Sumpf', decor: 'swamp', bgColor: 'linear-gradient(180deg, #14532d 0%, #65a30d 50%, #a3e635 100%)', enemies: ['bug', 'zombie', 'wizard', 'skeleton', 'scorpion'], hazard: 'acid' },
+  // Welt 9: Sternenmeer — keine Gruben (würden ins All fallen)
+  { name: 'Sternenmeer', decor: 'stars', bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #6366f1 50%, #c4b5fd 100%)', enemies: ['ghost', 'dragon', 'eagle', 'skeleton'], hazard: null },
+  // Welt 10: Endkampf — Lava überall!
+  { name: 'Endkampf', decor: 'lava', bgColor: 'linear-gradient(180deg, #18181b 0%, #ef4444 30%, #f97316 60%, #fde047 100%)', enemies: ['dragon', 'wizard', 'ghost', 'ogre', 'eagle', 'skeleton', 'zombie', 'scorpion'], hazard: 'lava' },
 ]
 
 function seededRandom(seed) {
@@ -465,6 +465,23 @@ function generateLevel(index) {
     enemies.push(enemy)
   }
 
+  // Gefahren-Felder (Lava / Wasser / Säure) — direkt am Boden, überspringbar
+  const hazards = []
+  if (theme.hazard) {
+    // Anzahl wächst mit Schwierigkeit, max 5
+    const numHazards = Math.min(5, 1 + Math.floor(difficulty * 0.35))
+    const hazardZone = width - 600 // Sicherheitsabstand zu Spawn (300) + Goal (300)
+    const hazardGap = hazardZone / Math.max(1, numHazards)
+    for (let i = 0; i < numHazards; i++) {
+      const baseX = Math.floor(300 + i * hazardGap + rng() * (hazardGap * 0.3))
+      // Breite skaliert sanft mit Schwierigkeit, bleibt gut springbar
+      // (Sprung ohne Boost ~140px, mit Anlauf ~200px → max Hazard 130px)
+      const w = Math.floor(60 + rng() * Math.min(70, difficulty * 8))
+      // Hazard sitzt auf Boden-Höhe (GROUND_Y=420), Höhe 28px
+      hazards.push({ type: theme.hazard, x: baseX, y: 412, w, h: 30 })
+    }
+  }
+
   return {
     name: theme.name,
     decor: theme.decor,
@@ -475,6 +492,7 @@ function generateLevel(index) {
     coins,
     blocks,
     enemies,
+    hazards,
     goal: { x: width - 80, y: 360 },
   }
 }

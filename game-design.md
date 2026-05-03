@@ -52,6 +52,7 @@ README.md           Public-facing readme
 - **P:** refill wizard shield to 3 charges
 - **9:** restart current level
 - **A:** skip current level
+- **L:** Lama-Modus (Auto-Play) — Charakter spielt selbst (siehe unten)
 
 ### Touch (mobile)
 
@@ -116,6 +117,36 @@ Loose collectibles distributed in levels: 🪙 coins (+1) and ⭐ stars (+1).
 
 In worlds 6+, 20% chance for any generated enemy to gain +1 HP (automatic variation).
 
+## Lama-Modus (Auto-Play)
+
+L drücken → toggle. Charakter spielt selbst nach simpler Heuristik (`applyAutoPlay` in `Game.jsx`):
+
+- Default: läuft Richtung Goal (rechts).
+- Look-ahead 130px: erkennt Hazards & nahe Bodengegner → springt (mit 8-Frame-Cooldown für Edge-Detection).
+- Breite Hazards (>90px) → Doppelsprung. Beim Fallen über Hazard → Doppelsprung-Rettung.
+- Mit aktiver Feder: hält Sprungtaste in der Luft = glide.
+- Mit aktivem Fire/Ice: schiesst auf Gegner in 280px Range.
+- Schild-Refill (P), Restart (9), Skip (A) bleiben manuell.
+
+HUD zeigt 🦙 Lama-Modus Badge wenn aktiv. AI ist bewusst simpel — kein Pathfinding, sammelt Items nur "im Vorbeilaufen".
+
+## Hazards (Gefahren-Felder)
+
+Pflastern den Boden in höheren Welten. Berührung = sofort 1 Leben weg + Restart-Position. Schild **blockt nicht** (sonst zu billig). Rainbow schützt.
+
+| Hazard | Welten | Animation |
+|---|---|---|
+| 🔥 lava | Tiefe Höhle, Vulkan, Endkampf | orange/rot Pixel-Tile, 8-step flow |
+| 💧 water | Eishöhle, Schloss-Garten | blaue Pixel-Wellen |
+| ☣️ acid | Sumpf | grün/gelb Pixel-Blasen |
+
+Generator (`levels.js`): platziert 1–5 Hazards je Level (skalierend), je 60–130px breit, 30px hoch, auf `y=412` (knapp über GROUND_Y). Sicherheitsabstand 300 px zu Spawn und Goal. Levels 1–5 (hand-crafted) haben keine Hazards.
+
+Datenmodell pro Level:
+```js
+hazards: [{ type: 'lava', x: 600, y: 412, w: 80, h: 30 }, ...]
+```
+
 ## Worlds (10 × 10 levels)
 
 1. **Wiese** (1–10) — Level 1 hand-crafted
@@ -153,7 +184,9 @@ Background symbols (trees, clouds, stars, lava, etc.) drift in the sky; ground-l
 - **Pixel fonts:** Press Start 2P (titles), Silkscreen (HUD).
 - Player has a soft **shadow** that fades with jump height.
 - **Animations:** idle bob, run squash/stretch, spin on second jump, slam trail, landing flash, floating `+1`-style score text on collect.
-- Platforms use a hard **pixel-art** look (no gradients).
+- **Boden + Plattformen** sind aus echten Minecraft-Style-Pixeln gebaut — gekachelte 8×8 SVG-Tiles mit zufällig gefärbten 1×1-Pixeln (Erde+Gras-Mix für Boden, Holz/Stein für Plattformen). Kein Gradient mehr.
+- **Globaler Pixel-Filter** auf `.world`: SVG `feMorphology`/`feFlood`/`feTile`-Filter macht alles im Spielfeld grobkörnig, inkl. Emojis. HUD bleibt scharf, weil ausserhalb von `.world`.
+- Hazards animieren via `@keyframes hazard-flow` mit `steps(8)` — 8-frame-Pixel-Animation, kein Smooth.
 - Niki has a JS-driven wobble rotation + green glow.
 
 ## Mobile

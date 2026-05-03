@@ -89,6 +89,94 @@ function rectsOverlap(a, b) {
   )
 }
 
+// ----------------------------------------------------------------
+// Lama-Modus (Auto-Play AI): einfache "best effort" Heuristik.
+// Mutiert keys direkt, damit normale Edge-Detection für Sprung greift.
+// ----------------------------------------------------------------
+function applyAutoPlay(keys, s, p, level, ai) {
+  // Reset alle AI-relevanten Tasten
+  keys['ArrowLeft'] = false
+  keys['ArrowRight'] = false
+  keys['ArrowUp'] = false
+  keys['ArrowDown'] = false
+  keys[' '] = false
+  keys['x'] = false
+
+  ai.framesSinceJump += 1
+
+  // Default: laufe nach rechts Richtung Goal
+  const goal = level.goal
+  if (goal && p.x < goal.x - 30) {
+    keys['ArrowRight'] = true
+  } else if (goal && p.x > goal.x + 30) {
+    keys['ArrowLeft'] = true
+  }
+
+  // Look-ahead 130px voraus für Hazards & Plattform-Kanten & Enemies
+  const lookX = p.x + 130
+  let dangerAhead = false
+  let highDangerAhead = false // braucht Doppelsprung
+
+  // Hazards voraus → springen
+  for (const h of s.hazards) {
+    if (h.x + h.w > p.x + 40 && h.x < lookX && h.y < p.y + PLAYER_H + 10) {
+      dangerAhead = true
+      // Breite Hazards → Doppelsprung sicher nehmen
+      if (h.w > 90) highDangerAhead = true
+    }
+  }
+
+  // Enemies voraus (ausser Rainbow schützt)
+  if (s.rainbowFrames === 0) {
+    for (const e of s.enemies) {
+      if (e.dead) continue
+      const dx = e.x - p.x
+      // Bodengegner direkt davor: stomp wenn auf gleicher Höhe
+      if (dx > 30 && dx < 130 && e.y > p.y - 40 && e.y < p.y + PLAYER_H + 30) {
+        dangerAhead = true
+      }
+    }
+  }
+
+  // Sprung: nur edge-press (1 Frame an), Cooldown 8 Frames
+  if (dangerAhead && ai.framesSinceJump > 8) {
+    if (p.onGround || (highDangerAhead && p.jumpsLeft > 0)) {
+      keys[' '] = true
+      ai.framesSinceJump = 0
+    }
+  }
+
+  // Wenn fallend in Hazard-Höhe → Doppelsprung retten
+  if (!p.onGround && p.vy > 4 && p.jumpsLeft > 0 && ai.framesSinceJump > 6) {
+    // Nur wenn Hazard direkt unten/voraus
+    for (const h of s.hazards) {
+      if (h.x < p.x + PLAYER_W + 50 && h.x + h.w > p.x - 20 && h.y < p.y + 200) {
+        keys[' '] = true
+        ai.framesSinceJump = 0
+        break
+      }
+    }
+  }
+
+  // Glide mit Feder: in der Luft Sprung-Taste halten
+  if (s.featherFrames > 0 && !p.onGround && p.vy >= 0) {
+    keys[' '] = true
+  }
+
+  // Schiessen: wenn Fire/Ice aktiv und Gegner in Range
+  if (s.power === 'fire' || s.power === 'ice') {
+    for (const e of s.enemies) {
+      if (e.dead) continue
+      const dx = e.x - p.x
+      const dy = e.y - p.y
+      if (dx > 20 && dx < 280 && Math.abs(dy) < 90) {
+        keys['x'] = true
+        break
+      }
+    }
+  }
+}
+
 export default function Game({ onExit, character = '🐈' }) {
   const [levelIndex, setLevelIndex] = useState(0)
   const [stars, setStars] = useState(0)
@@ -115,6 +203,9 @@ export default function Game({ onExit, character = '🐈' }) {
   const stateRef = useRef(null)
   const keysRef = useRef({})
   const animRef = useRef(null)
+  const autoPlayRef = useRef(false)
+  const aiStateRef = useRef({ framesSinceJump: 99, doubleJumpCooldown: 0 })
+  const [autoPlay, setAutoPlay] = useState(false)
   const wrapperRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [rotateGate, setRotateGate] = useState(() => {
@@ -170,6 +261,7 @@ export default function Game({ onExit, character = '🐈' }) {
       floatingTexts: [],
       landFlashFrames: 0,
       lastOnGround: true,
+      hazards: (level.hazards || []).map((h) => ({ ...h })),
       enemies: (level.enemies || []).map((e) => ({
         ...e,
         startX: e.x,
@@ -274,6 +366,19 @@ export default function Game({ onExit, character = '🐈' }) {
       if (e.key === 'a' || e.key === 'A') {
         skipLevel()
       }
+      // L → Lama-Modus (Auto-Spielen) toggle
+      if (e.key === 'l' || e.key === 'L') {
+        autoPlayRef.current = !autoPlayRef.current
+        setAutoPlay(autoPlayRef.current)
+        // Bei Aus: alle gehaltenen AI-Tasten freigeben
+        if (!autoPlayRef.current) {
+          keysRef.current['ArrowRight'] = false
+          keysRef.current['ArrowLeft'] = false
+          keysRef.current[' '] = false
+          keysRef.current['x'] = false
+          keysRef.current['ArrowDown'] = false
+        }
+      }
     }
     const up = (e) => {
       keysRef.current[e.key] = false
@@ -298,6 +403,11 @@ export default function Game({ onExit, character = '🐈' }) {
       const s = stateRef.current
       const p = s.player
       const keys = keysRef.current
+
+      // Lama-Modus: AI schreibt direkt in keys, Edge-Detection greift wie bei Spieler-Eingabe
+      if (autoPlayRef.current) {
+        applyAutoPlay(keys, s, p, level, aiStateRef.current)
+      }
 
       // Bewegung links/rechts (gesperrt während Bodenstoss)
       if (p.slamming) {
@@ -1045,6 +1155,23 @@ export default function Game({ onExit, character = '🐈' }) {
       }
       s.enemyProjectiles = s.enemyProjectiles.filter((ep) => !ep.dead)
 
+      // Gefahren-Felder (Lava, Wasser, Säure) — sofortiger Tod bei Berührung,
+      // ausser Regenbogen schützt. Schild blockt nicht (sonst zu billig).
+      if (p.invincibleFrames === 0 && s.rainbowFrames === 0) {
+        for (const h of s.hazards) {
+          if (rectsOverlap(pr, h)) {
+            p.invincibleFrames = 60
+            p.x = 60
+            p.y = GROUND_Y - PLAYER_H
+            p.vx = 0
+            p.vy = 0
+            p.slamming = false
+            setLives((l) => Math.max(0, l - 1))
+            break
+          }
+        }
+      }
+
       // Ziel erreicht?
       const goalRect = {
         x: level.goal.x,
@@ -1187,6 +1314,9 @@ export default function Game({ onExit, character = '🐈' }) {
         <div className="hud-item">🪙 {coinsCount}</div>
         <div className="hud-item">💯 {score}</div>
         <div className="hud-item">❤️ {lives}</div>
+        {autoPlay && (
+          <div className="hud-item lama-badge">🦙 Lama-Modus</div>
+        )}
         {superJump > 0 && (
           <div className="hud-item super-jump">
             🍄 Super-Sprung! {Math.ceil(superJump / 60)}s
@@ -1241,6 +1371,17 @@ export default function Game({ onExit, character = '🐈' }) {
         <button className="exit-btn" onClick={onExit}>← Zurück</button>
       </div>
 
+      {/* Globaler Pixel-Filter: macht alles im Spielfeld grobkörnig */}
+      <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }} aria-hidden="true">
+        <filter id="pixelate" x="0" y="0" width="100%" height="100%">
+          <feFlood x="2" y="2" width="1" height="1" />
+          <feComposite width="3" height="3" />
+          <feTile result="a" />
+          <feComposite in="SourceGraphic" in2="a" operator="in" />
+          <feMorphology operator="dilate" radius="1.5" />
+        </filter>
+      </svg>
+
       <div className="viewport-wrapper">
       <div
         className="viewport"
@@ -1272,6 +1413,17 @@ export default function Game({ onExit, character = '🐈' }) {
               height: VIEW_H - GROUND_Y,
             }}
           />
+
+          {/* Gefahren-Felder (Lava / Wasser / Säure) */}
+          {s.hazards.map((h, i) => (
+            <div
+              key={`hz${i}`}
+              className={`hazard hazard-${h.type}`}
+              style={{ left: h.x, top: h.y, width: h.w, height: h.h }}
+            >
+              <div className="hazard-surface" />
+            </div>
+          ))}
 
           {/* Plattformen */}
           {level.platforms.map((plat, i) => (
