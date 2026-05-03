@@ -44,6 +44,127 @@
   white-space: nowrap;
 }
 
+/* ----------------------------------------------------------------
+   Level-Auswahl-Menü (M-Taste)
+   ---------------------------------------------------------------- */
+
+.level-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 5, 30, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: menu-fade-in 0.18s ease-out;
+}
+
+@keyframes menu-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.level-menu {
+  background: linear-gradient(180deg, #2a1a4a 0%, #1a0e2a 100%);
+  border: 4px solid #c77dff;
+  box-shadow: 0 0 30px rgba(199, 125, 255, 0.6), 0 12px 40px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 720px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  font-family: 'Silkscreen', system-ui, sans-serif;
+}
+
+.level-menu h2 {
+  font-family: 'Press Start 2P', system-ui, sans-serif;
+  color: #fde047;
+  text-align: center;
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #422006;
+}
+
+.level-menu-hint {
+  color: #c4b5fd;
+  text-align: center;
+  margin: 0 0 20px 0;
+  font-size: 14px;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.level-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%);
+  color: #fff;
+  border: 3px solid #c4b5fd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Silkscreen', system-ui, sans-serif;
+  font-size: 12px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: 0 3px 0 #4c1d95;
+}
+
+.level-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 #4c1d95, 0 0 12px rgba(196, 181, 253, 0.6);
+}
+
+.level-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #4c1d95;
+}
+
+.level-btn.current {
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  border-color: #fde047;
+  box-shadow: 0 3px 0 #78350f, 0 0 14px rgba(253, 224, 71, 0.7);
+}
+
+.level-num {
+  font-family: 'Press Start 2P', system-ui, sans-serif;
+  font-size: 18px;
+}
+
+.level-name {
+  font-size: 11px;
+  opacity: 0.9;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.menu-close-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 10px 24px;
+  background: #ef4444;
+  color: #fff;
+  border: 3px solid #fecaca;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Silkscreen', system-ui, sans-serif;
+  font-size: 14px;
+  box-shadow: 0 3px 0 #991b1b;
+}
+
+.menu-close-btn:hover {
+  background: #dc2626;
+}
+
 /* Affen-Modus: voll sichtbares Badge mit pulsierendem Glow */
 .hud-item.ape-badge {
   background: linear-gradient(180deg, #f97316 0%, #b45309 100%);

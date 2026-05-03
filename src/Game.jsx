@@ -454,6 +454,15 @@ export default function Game({ onExit, character = '🐈' }) {
   // Affen-Modus: privater Cheat (R-Taste), Spieler ist unsterblich. Nicht in Steuerungs-Hilfe.
   const apeModeRef = useRef(false)
   const [apeMode, setApeMode] = useState(false)
+  // Level-Menü: M-Taste öffnet Auswahl der freigeschalteten Levels
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [maxLevelUnlocked, setMaxLevelUnlocked] = useState(() => {
+    if (typeof window === 'undefined') return 1
+    try {
+      const stored = parseInt(localStorage.getItem('alisa-max-level') || '1', 10)
+      return Math.max(1, Math.min(99, stored))
+    } catch (e) { return 1 }
+  })
   const wrapperRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [rotateGate, setRotateGate] = useState(() => {
@@ -587,6 +596,15 @@ export default function Game({ onExit, character = '🐈' }) {
     }
   }
 
+  // Level-Unlock: bei jedem Level-Wechsel höchstes erreichtes Level merken
+  useEffect(() => {
+    const reached = levelIndex + 1
+    if (reached > maxLevelUnlocked) {
+      setMaxLevelUnlocked(reached)
+      try { localStorage.setItem('alisa-max-level', String(reached)) } catch (e) {}
+    }
+  }, [levelIndex, maxLevelUnlocked])
+
   // Wenn alle Leben weg sind → Level neu starten
   useEffect(() => {
     if (lives <= 0 && status === 'playing') {
@@ -614,6 +632,10 @@ export default function Game({ onExit, character = '🐈' }) {
       // A → Level überspringen
       if (e.key === 'a' || e.key === 'A') {
         skipLevel()
+      }
+      // M → Level-Menü öffnen/schliessen
+      if (e.key === 'm' || e.key === 'M') {
+        setMenuOpen((o) => !o)
       }
       // R → Affen-Modus (privater Unsterblich-Cheat) toggle
       if (e.key === 'r' || e.key === 'R') {
@@ -649,6 +671,7 @@ export default function Game({ onExit, character = '🐈' }) {
   // Spiel-Loop
   useEffect(() => {
     if (status !== 'playing') return
+    if (menuOpen) return // Pausiert wenn Level-Menü offen
     if (!stateRef.current) return
 
     const level = LEVELS[levelIndex]
@@ -1459,7 +1482,7 @@ export default function Game({ onExit, character = '🐈' }) {
 
     animRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(animRef.current)
-  }, [levelIndex, status, character])
+  }, [levelIndex, status, character, menuOpen])
 
   if (!stateRef.current) return null
 
@@ -1489,6 +1512,18 @@ export default function Game({ onExit, character = '🐈' }) {
     setScore(0)
     setLives(5)
     setLevelIndex((i) => Math.min(i + 1, LEVELS.length - 1))
+  }
+
+  const jumpToLevel = (idx) => {
+    if (idx < 0 || idx >= LEVELS.length) return
+    setMenuOpen(false)
+    setStatus('playing')
+    setStars(0)
+    setScore(0)
+    setLives(5)
+    setCoinsCount(0)
+    setLevelIndex(idx)
+    setResetTrigger((t) => t + 1)
   }
 
   const startCountdown = () => {
@@ -1626,6 +1661,9 @@ export default function Game({ onExit, character = '🐈' }) {
         )}
         <button className="fs-btn" onClick={toggleMusic} title="Musik">
           {musicOn ? '🔊' : '🔇'}
+        </button>
+        <button className="fs-btn" onClick={() => setMenuOpen(true)} title="Level-Menü (M)">
+          📋
         </button>
         <button className="fs-btn" onClick={toggleFullscreen} title="Vollbild">
           {isFullscreen ? '🗗' : '🗖'}
@@ -1958,6 +1996,33 @@ export default function Game({ onExit, character = '🐈' }) {
             <p>💯 Endstand: {totalScore} Punkte</p>
             <button className="big-btn" onClick={restart}>
               Nochmal spielen
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Level-Auswahl-Menü (M-Taste oder Touch-Button) */}
+      {menuOpen && (
+        <div className="level-menu-overlay" onClick={() => setMenuOpen(false)}>
+          <div className="level-menu" onClick={(e) => e.stopPropagation()}>
+            <h2>🎯 Level wählen</h2>
+            <p className="level-menu-hint">
+              Du hast {maxLevelUnlocked} {maxLevelUnlocked === 1 ? 'Level' : 'Levels'} freigespielt!
+            </p>
+            <div className="level-grid">
+              {Array.from({ length: maxLevelUnlocked }, (_, i) => (
+                <button
+                  key={i}
+                  className={`level-btn ${levelIndex === i ? 'current' : ''}`}
+                  onClick={() => jumpToLevel(i)}
+                >
+                  <span className="level-num">{i + 1}</span>
+                  <span className="level-name">{LEVELS[i].name}</span>
+                </button>
+              ))}
+            </div>
+            <button className="menu-close-btn" onClick={() => setMenuOpen(false)}>
+              Schliessen
             </button>
           </div>
         </div>
