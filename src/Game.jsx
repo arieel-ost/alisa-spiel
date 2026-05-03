@@ -472,6 +472,16 @@ export default function Game({ onExit, character = '🐈' }) {
       return Math.max(1, Math.min(99, stored))
     } catch (e) { return 1 }
   })
+  // Speicherstände: 3 Slots in localStorage
+  const [saveSlots, setSaveSlots] = useState(() => {
+    if (typeof window === 'undefined') return [null, null, null]
+    try {
+      const stored = localStorage.getItem('alisa-saves')
+      if (!stored) return [null, null, null]
+      const parsed = JSON.parse(stored)
+      return Array.isArray(parsed) && parsed.length === 3 ? parsed : [null, null, null]
+    } catch (e) { return [null, null, null] }
+  })
   const wrapperRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [rotateGate, setRotateGate] = useState(() => {
@@ -1435,6 +1445,26 @@ export default function Game({ onExit, character = '🐈' }) {
       }
       s.enemies = s.enemies.filter((e) => !e.dead)
 
+      // Faller: theme-spezifische Sachen vom Himmel (Feuer/Eis/Felsen/Meteore/etc).
+      // Spawn in Spielerumgebung, fallen mit Schwerkraft, treffen wie Projektil.
+      if (level.faller && !frozen) {
+        s.fallerTimer = (s.fallerTimer || 60) - 1
+        if (s.fallerTimer <= 0) {
+          const baseX = p.x + (Math.random() * 700 - 250)
+          const spawnX = Math.max(40, Math.min(level.width - 40, baseX))
+          s.enemyProjectiles.push({
+            kind: 'sky',
+            emoji: level.faller.emoji,
+            x: spawnX, y: -40,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: 2.5 + Math.random() * 1.5,
+            life: 260,
+            gravity: false,
+          })
+          s.fallerTimer = level.faller.interval + Math.floor(Math.random() * level.faller.interval * 0.5)
+        }
+      }
+
       // Gegner-Projektile bewegen + Kollision (eingefroren wenn Uhr aktiv)
       for (const ep of s.enemyProjectiles) {
         if (!frozen) {
@@ -1585,6 +1615,42 @@ export default function Game({ onExit, character = '🐈' }) {
     setScore(0)
     setLives(5)
     setLevelIndex((i) => Math.min(i + 1, LEVELS.length - 1))
+  }
+
+  const saveToSlot = (slotIdx) => {
+    const data = {
+      level: levelIndex,
+      lives,
+      coins: coinsCount,
+      totalScore,
+      character,
+      timestamp: Date.now(),
+    }
+    const next = saveSlots.slice()
+    next[slotIdx] = data
+    setSaveSlots(next)
+    try { localStorage.setItem('alisa-saves', JSON.stringify(next)) } catch (e) {}
+  }
+
+  const loadFromSlot = (slotIdx) => {
+    const data = saveSlots[slotIdx]
+    if (!data) return
+    setMenuOpen(false)
+    setStatus('playing')
+    setStars(0)
+    setScore(0)
+    setLives(data.lives ?? 5)
+    setCoinsCount(data.coins ?? 0)
+    setTotalScore(data.totalScore ?? 0)
+    setLevelIndex(data.level ?? 0)
+    setResetTrigger((t) => t + 1)
+  }
+
+  const deleteSlot = (slotIdx) => {
+    const next = saveSlots.slice()
+    next[slotIdx] = null
+    setSaveSlots(next)
+    try { localStorage.setItem('alisa-saves', JSON.stringify(next)) } catch (e) {}
   }
 
   const jumpToLevel = (idx) => {
@@ -1782,6 +1848,7 @@ export default function Game({ onExit, character = '🐈' }) {
           {/* Boden */}
           <div
             className="ground"
+            data-decor={level.decor}
             style={{
               left: 0,
               top: GROUND_Y,
@@ -1806,6 +1873,7 @@ export default function Game({ onExit, character = '🐈' }) {
             <div
               key={i}
               className="platform"
+              data-decor={level.decor}
               style={{
                 left: plat.x,
                 top: plat.y,
@@ -1903,7 +1971,7 @@ export default function Game({ onExit, character = '🐈' }) {
               className={`enemy-projectile ep-${ep.kind}`}
               style={{ left: ep.x, top: ep.y }}
             >
-              {ENEMY_PROJECTILE_EMOJI[ep.kind]}
+              {ENEMY_PROJECTILE_EMOJI[ep.kind] || ep.emoji}
             </div>
           ))}
 
@@ -2113,6 +2181,38 @@ export default function Game({ onExit, character = '🐈' }) {
                   <span className="level-num">{i + 1}</span>
                   <span className="level-name">{LEVELS[i].name}</span>
                 </button>
+              ))}
+            </div>
+            <h3 className="save-section-title">💾 Speicherstände</h3>
+            <div className="save-grid">
+              {saveSlots.map((slot, i) => (
+                <div key={i} className="save-slot">
+                  <div className="save-slot-info">
+                    <strong>Slot {i + 1}</strong>
+                    {slot ? (
+                      <span>
+                        Level {slot.level + 1} · {slot.character} · ❤️ {slot.lives} · 💯 {slot.totalScore}
+                      </span>
+                    ) : (
+                      <span className="save-empty">— leer —</span>
+                    )}
+                  </div>
+                  <div className="save-slot-actions">
+                    <button className="save-btn save-write" onClick={() => saveToSlot(i)}>
+                      💾 Speichern
+                    </button>
+                    {slot && (
+                      <>
+                        <button className="save-btn save-load" onClick={() => loadFromSlot(i)}>
+                          ▶️ Laden
+                        </button>
+                        <button className="save-btn save-delete" onClick={() => deleteSlot(i)}>
+                          🗑️
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
             <button className="menu-close-btn" onClick={() => setMenuOpen(false)}>

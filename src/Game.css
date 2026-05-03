@@ -147,6 +147,87 @@
   line-height: 1.2;
 }
 
+.save-section-title {
+  font-family: 'Press Start 2P', system-ui, sans-serif;
+  color: #fde047;
+  text-align: center;
+  margin: 24px 0 12px 0;
+  font-size: 14px;
+  text-shadow: 2px 2px 0 #422006;
+}
+
+.save-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.save-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(124, 58, 237, 0.25);
+  border: 2px solid #7c3aed;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.save-slot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #e9d5ff;
+  font-family: 'Silkscreen', system-ui, sans-serif;
+  font-size: 12px;
+}
+
+.save-slot-info strong {
+  color: #fde047;
+  font-size: 14px;
+}
+
+.save-empty {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.save-slot-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.save-btn {
+  padding: 6px 10px;
+  font-family: 'Silkscreen', system-ui, sans-serif;
+  font-size: 11px;
+  border: 2px solid;
+  border-radius: 5px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.save-btn.save-write {
+  background: #16a34a;
+  border-color: #86efac;
+}
+.save-btn.save-write:hover { background: #15803d; }
+
+.save-btn.save-load {
+  background: #2563eb;
+  border-color: #93c5fd;
+}
+.save-btn.save-load:hover { background: #1d4ed8; }
+
+.save-btn.save-delete {
+  background: #b91c1c;
+  border-color: #fca5a5;
+}
+.save-btn.save-delete:hover { background: #991b1b; }
+
 .menu-close-btn {
   display: block;
   margin: 0 auto;
@@ -537,6 +618,101 @@
 }
 
 /* ----------------------------------------------------------------
+   Theme-Varianten für Boden + Plattformen.
+   Override des default Holz/Erde-Looks per data-decor Attribut.
+   Mapping: snow=Eis · clouds=Wolke · cave/mountains/lava/castle=Stein
+            stars/rainbow=Kristall · andere bleiben Holz/Erde.
+   ---------------------------------------------------------------- */
+
+/* SNOW: Eis-Tiles */
+.ground[data-decor="snow"] {
+  background-color: #93c5fd;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%2393c5fd'/><rect x='0' y='0' width='1' height='1' fill='%23dbeafe'/><rect x='2' y='0' width='1' height='1' fill='%23bfdbfe'/><rect x='5' y='0' width='1' height='1' fill='%23f0f9ff'/><rect x='1' y='1' width='1' height='1' fill='%23dbeafe'/><rect x='4' y='2' width='1' height='1' fill='%2360a5fa'/><rect x='3' y='3' width='1' height='1' fill='%23bfdbfe'/><rect x='6' y='4' width='1' height='1' fill='%23dbeafe'/><rect x='2' y='5' width='1' height='1' fill='%2360a5fa'/><rect x='7' y='6' width='1' height='1' fill='%23bfdbfe'/></svg>");
+}
+.platform[data-decor="snow"] {
+  background-color: #bfdbfe;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23bfdbfe'/><rect x='0' y='0' width='8' height='1' fill='%23f0f9ff'/><rect x='0' y='1' width='8' height='1' fill='%23dbeafe'/><rect x='2' y='3' width='1' height='1' fill='%2393c5fd'/><rect x='5' y='4' width='1' height='1' fill='%2393c5fd'/><rect x='3' y='6' width='1' height='1' fill='%2360a5fa'/></svg>");
+  border-bottom-color: #1e40af;
+  box-shadow: 0 3px 0 #1e40af;
+}
+
+/* CLOUDS: Wolken-Tiles (weich, hell) */
+.ground[data-decor="clouds"] {
+  background-color: #f0abfc;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23f0abfc'/><rect x='0' y='0' width='8' height='2' fill='white'/><rect x='2' y='2' width='1' height='1' fill='white'/><rect x='5' y='2' width='1' height='1' fill='white'/><rect x='1' y='4' width='1' height='1' fill='%23fce7f3'/><rect x='6' y='5' width='1' height='1' fill='%23fce7f3'/></svg>");
+}
+.platform[data-decor="clouds"] {
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='white'/><rect x='0' y='0' width='8' height='2' fill='%23fce7f3'/><rect x='3' y='3' width='1' height='1' fill='%23f0abfc'/><rect x='6' y='5' width='1' height='1' fill='%23f0abfc'/></svg>");
+  border-bottom-color: #be185d;
+  box-shadow: 0 3px 0 #be185d, 0 0 12px rgba(255,255,255,0.6);
+}
+
+/* STONE-DARK: dunkler Stein für mountains/cave/lava/castle */
+.ground[data-decor="mountains"],
+.ground[data-decor="cave"],
+.ground[data-decor="lava"],
+.ground[data-decor="castle"] {
+  background-color: #44403c;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%2344403c'/><rect x='0' y='0' width='1' height='1' fill='%2378716c'/><rect x='3' y='0' width='1' height='1' fill='%23a8a29e'/><rect x='6' y='1' width='1' height='1' fill='%23292524'/><rect x='1' y='2' width='1' height='1' fill='%2378716c'/><rect x='4' y='3' width='1' height='1' fill='%23292524'/><rect x='2' y='4' width='1' height='1' fill='%23a8a29e'/><rect x='5' y='5' width='1' height='1' fill='%23292524'/><rect x='0' y='6' width='1' height='1' fill='%2378716c'/><rect x='7' y='7' width='1' height='1' fill='%23a8a29e'/></svg>");
+}
+.platform[data-decor="mountains"],
+.platform[data-decor="cave"],
+.platform[data-decor="lava"],
+.platform[data-decor="castle"] {
+  background-color: #57534e;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%2357534e'/><rect x='0' y='0' width='8' height='1' fill='%23a8a29e'/><rect x='2' y='2' width='1' height='1' fill='%23292524'/><rect x='5' y='3' width='1' height='1' fill='%2378716c'/><rect x='1' y='5' width='1' height='1' fill='%23292524'/><rect x='6' y='6' width='1' height='1' fill='%2378716c'/></svg>");
+  border-bottom-color: #1c1917;
+  box-shadow: 0 3px 0 #1c1917;
+}
+
+/* CRYSTAL: Sternen-/Regenbogen-Themes */
+.ground[data-decor="stars"],
+.ground[data-decor="rainbow"] {
+  background-color: #7c3aed;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%237c3aed'/><rect x='1' y='0' width='1' height='1' fill='%23fde047'/><rect x='5' y='1' width='1' height='1' fill='%23ec4899'/><rect x='3' y='3' width='1' height='1' fill='%2322d3ee'/><rect x='6' y='4' width='1' height='1' fill='%23fde047'/><rect x='2' y='6' width='1' height='1' fill='%23ec4899'/><rect x='7' y='7' width='1' height='1' fill='%2322d3ee'/></svg>");
+}
+.platform[data-decor="stars"],
+.platform[data-decor="rainbow"] {
+  background-color: #a855f7;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23a855f7'/><rect x='0' y='0' width='8' height='1' fill='%23fde047'/><rect x='3' y='2' width='1' height='1' fill='%23ec4899'/><rect x='6' y='3' width='1' height='1' fill='%2322d3ee'/><rect x='1' y='5' width='1' height='1' fill='%23fde047'/><rect x='5' y='6' width='1' height='1' fill='%23ec4899'/></svg>");
+  border-bottom-color: #6b21a8;
+  box-shadow: 0 3px 0 #6b21a8, 0 0 14px rgba(232, 121, 249, 0.5);
+}
+
+/* SAND: heller Sandstein */
+.ground[data-decor="sand"] {
+  background-color: #fcd34d;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23fcd34d'/><rect x='1' y='1' width='1' height='1' fill='%23fde68a'/><rect x='4' y='2' width='1' height='1' fill='%23f59e0b'/><rect x='7' y='3' width='1' height='1' fill='%23fde68a'/><rect x='2' y='5' width='1' height='1' fill='%23f59e0b'/><rect x='5' y='6' width='1' height='1' fill='%23fde68a'/></svg>");
+}
+.platform[data-decor="sand"] {
+  background-color: #f59e0b;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23f59e0b'/><rect x='0' y='0' width='8' height='1' fill='%23fde68a'/><rect x='3' y='3' width='1' height='1' fill='%23b45309'/><rect x='6' y='5' width='1' height='1' fill='%23b45309'/></svg>");
+  border-bottom-color: #92400e;
+  box-shadow: 0 3px 0 #92400e;
+}
+
+/* SWAMP: moosig grün-braun */
+.ground[data-decor="swamp"] {
+  background-color: #166534;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23166534'/><rect x='0' y='0' width='1' height='1' fill='%2384cc16'/><rect x='3' y='0' width='1' height='1' fill='%23a3e635'/><rect x='6' y='1' width='1' height='1' fill='%2365a30d'/><rect x='2' y='3' width='1' height='1' fill='%23713f12'/><rect x='5' y='4' width='1' height='1' fill='%23713f12'/><rect x='1' y='6' width='1' height='1' fill='%23365314'/></svg>");
+}
+.platform[data-decor="swamp"] {
+  background-color: #4d7c0f;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%234d7c0f'/><rect x='0' y='0' width='8' height='1' fill='%2384cc16'/><rect x='3' y='3' width='1' height='1' fill='%23713f12'/><rect x='6' y='5' width='1' height='1' fill='%23365314'/></svg>");
+  border-bottom-color: #1a2e05;
+  box-shadow: 0 3px 0 #1a2e05;
+}
+
+/* FOREST: dunkler Boden mit dichten Pflanzen */
+.platform[data-decor="forest"] {
+  background-color: #14532d;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23713f12'/><rect x='0' y='0' width='8' height='1' fill='%2384cc16'/><rect x='1' y='0' width='1' height='1' fill='%2322c55e'/><rect x='4' y='0' width='1' height='1' fill='%2316a34a'/><rect x='2' y='3' width='1' height='1' fill='%23422006'/><rect x='5' y='5' width='1' height='1' fill='%23422006'/></svg>");
+  border-bottom-color: #422006;
+  box-shadow: 0 3px 0 #422006;
+}
+
+/* ----------------------------------------------------------------
    Mario-Style Hindernisse: Röhre / Mauer / Felsen
    Pixelig, solid, am Boden verankert.
    ---------------------------------------------------------------- */
@@ -580,6 +756,47 @@
   background-repeat: repeat;
   border: 2px solid #422006;
   box-shadow: 0 3px 0 #422006;
+}
+
+/* Eiszapfen — schmal, hellblau-weiss, oben spitzer Look */
+.obstacle-icicle {
+  background-color: #bfdbfe;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23bfdbfe'/><rect x='0' y='0' width='8' height='1' fill='%23f0f9ff'/><rect x='3' y='2' width='1' height='6' fill='white'/><rect x='1' y='4' width='1' height='1' fill='%2393c5fd'/><rect x='6' y='5' width='1' height='1' fill='%2393c5fd'/></svg>");
+  background-size: 16px 16px;
+  border: 2px solid #1e40af;
+  border-top: 2px solid #f0f9ff;
+  border-radius: 4px 4px 12px 12px;
+  box-shadow: 0 3px 0 #1e40af, 0 0 12px rgba(147, 197, 253, 0.5);
+}
+
+/* Kaktus — grüne Säule mit gelben Stacheln */
+.obstacle-cactus {
+  background-color: #16a34a;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%2316a34a'/><rect x='0' y='0' width='1' height='8' fill='%23bef264'/><rect x='7' y='0' width='1' height='8' fill='%23166534'/><rect x='3' y='1' width='1' height='1' fill='%23fde047'/><rect x='4' y='4' width='1' height='1' fill='%23fde047'/><rect x='2' y='6' width='1' height='1' fill='%23fde047'/></svg>");
+  background-size: 16px 16px;
+  border: 2px solid #14532d;
+  border-radius: 8px 8px 4px 4px;
+  box-shadow: 0 3px 0 #14532d;
+}
+
+/* Baumstumpf — braun mit Holzringen */
+.obstacle-stump {
+  background-color: #78350f;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%2378350f'/><rect x='0' y='0' width='16' height='2' fill='%23a16207'/><rect x='2' y='4' width='12' height='1' fill='%23422006'/><rect x='3' y='8' width='10' height='1' fill='%23422006'/><rect x='4' y='12' width='8' height='1' fill='%23422006'/><rect x='6' y='5' width='1' height='1' fill='%2384cc16'/><rect x='9' y='5' width='1' height='1' fill='%2384cc16'/></svg>");
+  background-size: 32px 32px;
+  border: 3px solid #422006;
+  border-radius: 4px;
+  box-shadow: 0 3px 0 #422006;
+}
+
+/* Kristall — leuchtend lila/cyan */
+.obstacle-crystal {
+  background-color: #a855f7;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'><rect width='8' height='8' fill='%23a855f7'/><rect x='1' y='0' width='1' height='1' fill='white'/><rect x='5' y='1' width='1' height='1' fill='%23fde047'/><rect x='3' y='3' width='1' height='1' fill='%2322d3ee'/><rect x='6' y='4' width='1' height='1' fill='white'/><rect x='2' y='6' width='1' height='1' fill='%23ec4899'/></svg>");
+  background-size: 16px 16px;
+  border: 2px solid #6b21a8;
+  border-radius: 8px 8px 2px 2px;
+  box-shadow: 0 3px 0 #6b21a8, 0 0 16px rgba(168, 85, 247, 0.7);
 }
 
 /* Grauer Felsen */
@@ -787,6 +1004,12 @@
 .enemy-projectile.ep-laser {
   filter: drop-shadow(0 0 12px #22d3ee) drop-shadow(0 0 4px white);
   animation: spin 0.18s linear infinite;
+}
+
+.enemy-projectile.ep-sky {
+  filter: drop-shadow(0 0 8px rgba(255, 200, 100, 0.7));
+  font-size: 26px;
+  animation: spin 0.6s linear infinite;
 }
 
 @keyframes wobble {
