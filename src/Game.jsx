@@ -104,6 +104,10 @@ function rectsOverlap(a, b) {
   )
 }
 
+// Stabile IDs für React-Keys, damit DOM-Refs nach Filter-Operationen korrekt bleiben.
+let _entityIdSeq = 0
+const nextId = () => ++_entityIdSeq
+
 // ----------------------------------------------------------------
 // Lama-Modus v2 (Auto-Play AI):
 //   - Stuck-Detection mit Recovery (Sprung + Rückwärts)
@@ -473,6 +477,17 @@ export default function Game({ onExit, character = '🐈' }) {
   const animRef = useRef(null)
   const autoPlayRef = useRef(false)
   const aiStateRef = useRef({ framesSinceJump: 99, doubleJumpCooldown: 0 })
+  // DOM-Refs für direkte Style-Mutation pro Frame (statt React-Rerender).
+  const worldRef = useRef(null)
+  const playerRef = useRef(null)
+  const playerShadowRef = useRef(null)
+  const slamTrailRef = useRef(null)
+  const bombFlashRef = useRef(null)
+  const bombShieldBubbleRef = useRef(null)
+  const bombShieldCountRef = useRef(null)
+  // Topologie-Signatur: triggert React nur wenn Entity-Anzahl wechselt.
+  const topoSigRef = useRef('')
+  const lastSecondsRef = useRef({})
   const [autoPlay, setAutoPlay] = useState(false)
   // Affen-Modus: Cheat - unsterblich. Aktivierbar mit L wenn Charakter = Affe (Alisa).
   const apeModeRef = useRef(false)
@@ -528,14 +543,15 @@ export default function Game({ onExit, character = '🐈' }) {
       },
       prevJumpKey: false,
       prevDownKey: false,
-      stars: level.stars.map((s) => ({ ...s, taken: false })),
-      coins: (level.coins || []).map((c) => ({ ...c, taken: false })),
+      stars: level.stars.map((s) => ({ ...s, taken: false, _id: nextId() })),
+      coins: (level.coins || []).map((c) => ({ ...c, taken: false, _id: nextId() })),
       blocks: (level.blocks || []).map((b) => ({
         ...b,
         w: BLOCK_SIZE,
         h: BLOCK_SIZE,
         hit: false,
         bumpFrames: 0,
+        _id: nextId(),
       })),
       items: [], // Items entstehen, wenn Blöcke getroffen werden
       projectiles: [],
@@ -563,7 +579,7 @@ export default function Game({ onExit, character = '🐈' }) {
       floatingTexts: [],
       landFlashFrames: 0,
       lastOnGround: true,
-      hazards: (level.hazards || []).map((h) => ({ ...h })),
+      hazards: (level.hazards || []).map((h) => ({ ...h, _id: nextId() })),
       enemies: (level.enemies || []).map((e) => ({
         ...e,
         startX: e.x,
@@ -576,6 +592,7 @@ export default function Game({ onExit, character = '🐈' }) {
         hitFlash: 0,
         diving: false,
         diveCooldown: 0,
+        _id: nextId(),
       })),
       enemyProjectiles: [],
       camera: 0,
@@ -704,6 +721,240 @@ export default function Game({ onExit, character = '🐈' }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ----- Helpers für direkte DOM-Mutation (statt React-Rerender pro Frame) -----
+
+  // Stelle sicher, dass jede Entität in dynamischen Listen eine stabile _id hat,
+  // damit React-Keys konsistent bleiben und Refs nicht verrutschen.
+  const ensureIds = (arr) => {
+    if (!arr) return
+    for (const e of arr) if (e._id === undefined) e._id = nextId()
+  }
+
+  // Topologie-Signatur: Längen der dynamischen Listen.
+  // Nur bei Längenänderung (Push/Filter) muss React den DOM-Baum neu aufbauen;
+  // alle anderen Frame-Updates schreibt applyVisuals direkt ins DOM.
+  const computeTopologySignature = (s) => {
+    return [
+      s.items.length,
+      s.enemies.length,
+      s.projectiles.length,
+      s.enemyProjectiles.length,
+      s.floatingTexts.length,
+      (s.fartClouds || []).length,
+    ].join('|')
+  }
+
+  // HUD-Timer nur einmal pro Sekunde in React-State schreiben (Display-Granularität).
+  const setSecondTimer = (key, frames, setter) => {
+    const sec = Math.ceil(Math.max(0, frames) / 60)
+    if (lastSecondsRef.current[key] !== sec) {
+      lastSecondsRef.current[key] = sec
+      setter(frames)
+    }
+  }
+
+  // Schreibt aktuelle Positionen/Klassen direkt ins DOM. Kein React-Rerender.
+  const applyVisuals = (s, p, character) => {
+    // Kamera (World-Container)
+    if (worldRef.current) {
+      worldRef.current.style.transform = `translateX(${-s.camera}px)`
+    }
+
+    // Spieler: Position + zeitabhängige Wackel-Skalierung + State-Klassen
+    const playerEl = playerRef.current
+    if (playerEl) {
+      const isNiki = character === '🦜'
+      const nikiWobble = isNiki ? Math.sin(Date.now() / 90) * 10 : 0
+      const idleBob = !isNiki && p.onGround && p.vx === 0 ? Math.sin(Date.now() / 400) * 0.04 : 0
+      const runBob = p.onGround && p.vx !== 0 ? Math.sin(Date.now() / 80) * 0.06 : 0
+      const scaleY = 1 + idleBob - Math.abs(runBob)
+      const scaleX = (1 + Math.abs(runBob) * 0.5) * (-p.facing)
+      playerEl.style.left = p.x + 'px'
+      playerEl.style.top = p.y + 'px'
+      playerEl.style.transform = `scaleX(${scaleX}) scaleY(${scaleY}) rotate(${nikiWobble}deg)`
+      const cl = playerEl.classList
+      cl.toggle('hurt', p.invincibleFrames > 0)
+      cl.toggle('powered', s.superJumpFrames > 0)
+      cl.toggle('power-fire', s.power === 'fire')
+      cl.toggle('power-ice', s.power === 'ice')
+      cl.toggle('spin', p.spinFrames > 0)
+      cl.toggle('slam', p.slamming)
+      cl.toggle('rainbow', s.rainbowFrames > 0)
+      cl.toggle('has-shield', s.shield)
+      cl.toggle('flying', s.featherFrames > 0)
+      cl.toggle('landed', s.landFlashFrames > 0)
+    }
+
+    // Schatten unter dem Spieler
+    const shadowEl = playerShadowRef.current
+    if (shadowEl) {
+      shadowEl.style.left = (p.x + PLAYER_W / 2 - 18) + 'px'
+      shadowEl.style.top = (GROUND_Y - 4) + 'px'
+      shadowEl.style.opacity = String(
+        p.onGround ? 0.5 : Math.max(0.15, 0.5 - (GROUND_Y - p.y - PLAYER_H) / 400)
+      )
+    }
+
+    // Slam-Trail: nur sichtbar während Bodenstoss
+    const trailEl = slamTrailRef.current
+    if (trailEl) {
+      if (p.slamming) {
+        trailEl.style.display = ''
+        trailEl.style.left = p.x + 'px'
+        trailEl.style.top = (p.y + PLAYER_H) + 'px'
+      } else {
+        trailEl.style.display = 'none'
+      }
+    }
+
+    // Bomb-Flash: Opacity-Animation
+    const flashEl = bombFlashRef.current
+    if (flashEl) {
+      if (s.bombFlashFrames > 0) {
+        flashEl.style.display = ''
+        flashEl.style.opacity = String(s.bombFlashFrames / 24)
+      } else {
+        flashEl.style.display = 'none'
+      }
+    }
+
+    // Hexer-Schild Blase + Zähler
+    const bubbleEl = bombShieldBubbleRef.current
+    if (bubbleEl) {
+      if (s.bombShield > 0) {
+        bubbleEl.style.display = ''
+        bubbleEl.style.left = (p.x - 14) + 'px'
+        bubbleEl.style.top = (p.y - 14) + 'px'
+      } else {
+        bubbleEl.style.display = 'none'
+      }
+    }
+    const countEl = bombShieldCountRef.current
+    if (countEl) {
+      if (s.bombShield > 0) {
+        countEl.style.display = ''
+        countEl.style.left = (p.x + PLAYER_W / 2 - 14) + 'px'
+        countEl.style.top = (p.y - 22) + 'px'
+        const txt = String(s.bombShield)
+        if (countEl.textContent !== txt) countEl.textContent = txt
+      } else {
+        countEl.style.display = 'none'
+      }
+    }
+
+    // Sterne (gesammelte verbergen)
+    for (const star of s.stars) {
+      const el = star._el
+      if (!el) continue
+      if (star.taken) {
+        el.style.display = 'none'
+      } else {
+        el.style.display = ''
+        el.style.left = star.x + 'px'
+        el.style.top = star.y + 'px'
+      }
+    }
+
+    // Münzen
+    for (const coin of s.coins) {
+      const el = coin._el
+      if (!el) continue
+      if (coin.taken) {
+        el.style.display = 'none'
+      } else {
+        el.style.display = ''
+        el.style.left = coin.x + 'px'
+        el.style.top = coin.y + 'px'
+      }
+    }
+
+    // Items
+    for (const item of s.items) {
+      const el = item._el
+      if (!el) continue
+      if (item.taken) {
+        el.style.display = 'none'
+      } else {
+        el.style.display = ''
+        el.style.left = item.x + 'px'
+        el.style.top = item.y + 'px'
+      }
+    }
+
+    // Frage-Blöcke: bumpFrames erzeugen vertikalen Versatz, hit toggelt 'used'
+    for (const block of s.blocks) {
+      const el = block._el
+      if (!el) continue
+      const offset = block.bumpFrames > 6 ? (12 - block.bumpFrames) * 2 : block.bumpFrames * 2
+      el.style.left = block.x + 'px'
+      el.style.top = (block.y - offset) + 'px'
+      el.classList.toggle('used', !!block.hit)
+      const desired = block.hit ? '' : character
+      if (el.textContent !== desired) el.textContent = desired
+    }
+
+    // Hazards (statisch innerhalb des Levels, einmal positionieren reicht — aber billig)
+    for (const h of s.hazards) {
+      const el = h._el
+      if (!el) continue
+      el.style.left = h.x + 'px'
+      el.style.top = h.y + 'px'
+    }
+
+    // Gegner: Position, scaleX für ghost/dragon, frozen + hit-flash Klassen
+    const frozen = s.freezeFrames > 0
+    for (const e of s.enemies) {
+      const el = e._el
+      if (!el) continue
+      el.style.left = e.x + 'px'
+      el.style.top = e.y + 'px'
+      if (e.type === 'ghost' || e.type === 'dragon') {
+        el.style.transform = `scaleX(${e.dir > 0 ? -1 : 1})`
+      } else if (el.style.transform) {
+        el.style.transform = ''
+      }
+      el.classList.toggle('frozen', frozen)
+      el.classList.toggle('hit-flash', e.hitFlash > 0)
+    }
+
+    // Gegner-Projektile
+    for (const ep of s.enemyProjectiles) {
+      const el = ep._el
+      if (!el) continue
+      el.style.left = ep.x + 'px'
+      el.style.top = ep.y + 'px'
+    }
+
+    // Spieler-Projektile
+    for (const proj of s.projectiles) {
+      const el = proj._el
+      if (!el) continue
+      el.style.left = proj.x + 'px'
+      el.style.top = proj.y + 'px'
+    }
+
+    // Schwebende Punkte-Texte: Position + verblassen
+    for (const ft of s.floatingTexts) {
+      const el = ft._el
+      if (!el) continue
+      el.style.left = ft.x + 'px'
+      el.style.top = ft.y + 'px'
+      el.style.opacity = String(Math.max(0, 1 - ft.age / 50))
+    }
+
+    // Pups-Wolken (Niki)
+    if (s.fartClouds) {
+      for (const f of s.fartClouds) {
+        const el = f._el
+        if (!el) continue
+        el.style.left = f.x + 'px'
+        el.style.top = f.y + 'px'
+        el.style.opacity = String(Math.max(0, f.life / 60))
+        el.style.transform = `scale(${f.scale + f.age / 100})`
+      }
+    }
+  }
 
   // Spiel-Loop
   useEffect(() => {
@@ -1120,16 +1371,17 @@ export default function Game({ onExit, character = '🐈' }) {
         }
       }
 
+      // HUD-Timer: setState nur wenn die angezeigte Sekunden-Anzahl wechselt.
       // Super-Sprung Timer
       if (s.superJumpFrames > 0) {
         s.superJumpFrames -= 1
-        setSuperJump(s.superJumpFrames)
+        setSecondTimer('superJump', s.superJumpFrames, setSuperJump)
       }
 
       // Kraft-Timer (Feuer/Eis)
       if (s.powerFrames > 0) {
         s.powerFrames -= 1
-        setPowerTime(s.powerFrames)
+        setSecondTimer('power', s.powerFrames, setPowerTime)
         if (s.powerFrames === 0) {
           s.power = null
           setPower(null)
@@ -1139,68 +1391,68 @@ export default function Game({ onExit, character = '🐈' }) {
       // Regenbogen-Timer
       if (s.rainbowFrames > 0) {
         s.rainbowFrames -= 1
-        setRainbowTime(s.rainbowFrames)
+        setSecondTimer('rainbow', s.rainbowFrames, setRainbowTime)
       }
 
       // Feder-Timer (Fliegen)
       if (s.featherFrames > 0) {
         s.featherFrames -= 1
-        setFeatherTime(s.featherFrames)
+        setSecondTimer('feather', s.featherFrames, setFeatherTime)
       }
       // Magnet-Timer
       if (s.magnetFrames > 0) {
         s.magnetFrames -= 1
-        setMagnetTime(s.magnetFrames)
+        setSecondTimer('magnet', s.magnetFrames, setMagnetTime)
       }
       // Freeze-Timer
       if (s.freezeFrames > 0) {
         s.freezeFrames -= 1
-        setFreezeTime(s.freezeFrames)
+        setSecondTimer('freeze', s.freezeFrames, setFreezeTime)
       }
       // Blitz-Timer
       if (s.lightningFrames > 0) {
         s.lightningFrames -= 1
-        setLightningTime(s.lightningFrames)
+        setSecondTimer('lightning', s.lightningFrames, setLightningTime)
       }
       // Schlittschuhe-Timer
       if (s.skatesFrames > 0) {
         s.skatesFrames -= 1
-        setSkatesTime(s.skatesFrames)
+        setSecondTimer('skates', s.skatesFrames, setSkatesTime)
       }
       // Rakete-Timer
       if (s.rocketFrames > 0) {
         s.rocketFrames -= 1
-        setRocketTime(s.rocketFrames)
+        setSecondTimer('rocket', s.rocketFrames, setRocketTime)
       }
       // Feuerlöscher-Timer
       if (s.extinguisherFrames > 0) {
         s.extinguisherFrames -= 1
-        setExtinguisherTime(s.extinguisherFrames)
+        setSecondTimer('extinguisher', s.extinguisherFrames, setExtinguisherTime)
       }
       // Schwert-Timer
       if (s.swordFrames > 0) {
         s.swordFrames -= 1
-        setSwordTime(s.swordFrames)
+        setSecondTimer('sword', s.swordFrames, setSwordTime)
       }
       // Taschenlampe-Timer (Bats werden in Enemy-Loop entfernt)
       if (s.flashlightFrames > 0) {
         s.flashlightFrames -= 1
-        setFlashlightTime(s.flashlightFrames)
+        setSecondTimer('flashlight', s.flashlightFrames, setFlashlightTime)
       }
       // Mond-Schwerkraft-Timer
       if (s.moonFrames > 0) {
         s.moonFrames -= 1
-        setMoonTime(s.moonFrames)
+        setSecondTimer('moon', s.moonFrames, setMoonTime)
       }
       // Chili-Timer (Triple-Schuss aktiv solange chiliFrames > 0)
       if (s.chiliFrames > 0) {
         s.chiliFrames -= 1
-        setChiliTime(s.chiliFrames)
+        setSecondTimer('chili', s.chiliFrames, setChiliTime)
       }
-      // Bomben-Blitz Animation
+      // Bomben-Blitz Animation: Opacity läuft direkt via DOM-Ref, kein React-State pro Frame.
       if (s.bombFlashFrames > 0) {
         s.bombFlashFrames -= 1
-        setBombFlash(s.bombFlashFrames)
+        if (s.bombFlashFrames === 0) setBombFlash(0)
       }
 
       // Schiessen
@@ -1677,7 +1929,24 @@ export default function Game({ onExit, character = '🐈' }) {
         Math.min(p.x - VIEW_W / 2 + PLAYER_W / 2, level.width - VIEW_W)
       )
 
-      force((n) => (n + 1) % 1000000)
+      // Stabile IDs für alle dynamischen Listen sicherstellen (für React-Keys)
+      ensureIds(s.items)
+      ensureIds(s.projectiles)
+      ensureIds(s.enemyProjectiles)
+      ensureIds(s.floatingTexts)
+      ensureIds(s.fartClouds)
+      ensureIds(s.enemies)
+
+      // Direkte DOM-Mutation für alle Pro-Frame-Visuals (kein React-Rerender).
+      applyVisuals(s, p, character)
+
+      // React nur bei Topologie-Änderung (Listen-Längen / Sichtbarkeits-Flags) rerendern.
+      const sig = computeTopologySignature(s)
+      if (sig !== topoSigRef.current) {
+        topoSigRef.current = sig
+        force((n) => (n + 1) % 1000000)
+      }
+
       animRef.current = requestAnimationFrame(tick)
     }
 
@@ -1969,10 +2238,13 @@ export default function Game({ onExit, character = '🐈' }) {
         className="viewport"
         style={{ width: VIEW_W, height: VIEW_H, background: level.bgColor }}
       >
-        {bombFlash > 0 && (
-          <div className="bomb-flash" style={{ opacity: bombFlash / 24 }} />
-        )}
         <div
+          ref={bombFlashRef}
+          className="bomb-flash"
+          style={{ display: 'none' }}
+        />
+        <div
+          ref={worldRef}
           className="world"
           style={{
             width: level.width,
@@ -1998,9 +2270,10 @@ export default function Game({ onExit, character = '🐈' }) {
           />
 
           {/* Gefahren-Felder (Lava / Wasser / Säure) */}
-          {s.hazards.map((h, i) => (
+          {s.hazards.map((h) => (
             <div
-              key={`hz${i}`}
+              key={h._id}
+              ref={(el) => { h._el = el }}
               className={`hazard hazard-${h.type}`}
               style={{ left: h.x, top: h.y, width: h.w, height: h.h }}
             >
@@ -2032,14 +2305,15 @@ export default function Game({ onExit, character = '🐈' }) {
             />
           ))}
 
-          {/* Fragezeichen-Blöcke */}
-          {s.blocks.map((block, i) => (
+          {/* Fragezeichen-Blöcke (used-Klasse + bumpFrames-Versatz werden in applyVisuals gesetzt) */}
+          {s.blocks.map((block) => (
             <div
-              key={`b${i}`}
-              className={`block ${block.hit ? 'used' : ''}`}
+              key={block._id}
+              ref={(el) => { block._el = el }}
+              className="block"
               style={{
                 left: block.x,
-                top: block.y - (block.bumpFrames > 6 ? (12 - block.bumpFrames) * 2 : block.bumpFrames * 2),
+                top: block.y,
                 width: block.w,
                 height: block.h,
               }}
@@ -2048,66 +2322,59 @@ export default function Game({ onExit, character = '🐈' }) {
             </div>
           ))}
 
-          {/* Sterne */}
-          {s.stars.map((star, i) =>
-            star.taken ? null : (
-              <div
-                key={`s${i}`}
-                className="star"
-                style={{ left: star.x, top: star.y }}
-              >
-                ⭐
-              </div>
-            )
-          )}
+          {/* Sterne (taken → display:none via applyVisuals) */}
+          {s.stars.map((star) => (
+            <div
+              key={star._id}
+              ref={(el) => { star._el = el }}
+              className="star"
+              style={{ left: star.x, top: star.y }}
+            >
+              ⭐
+            </div>
+          ))}
 
           {/* Münzen */}
-          {s.coins.map((coin, i) =>
-            coin.taken ? null : (
-              <div
-                key={`c${i}`}
-                className="coin"
-                style={{ left: coin.x, top: coin.y }}
-              >
-                🪙
-              </div>
-            )
-          )}
+          {s.coins.map((coin) => (
+            <div
+              key={coin._id}
+              ref={(el) => { coin._el = el }}
+              className="coin"
+              style={{ left: coin.x, top: coin.y }}
+            >
+              🪙
+            </div>
+          ))}
 
           {/* Items */}
-          {s.items.map((item, i) =>
-            item.taken ? null : (
-              <div
-                key={`i${i}`}
-                className={`item item-${item.type}`}
-                style={{ left: item.x, top: item.y }}
-              >
-                {ITEM_EMOJI[item.type]}
-              </div>
-            )
-          )}
-
-          {/* Feinde */}
-          {s.enemies.map((e, i) => (
+          {s.items.map((item) => (
             <div
-              key={`e${i}`}
-              className={`enemy enemy-${e.type} ${s.freezeFrames > 0 ? 'frozen' : ''} ${e.hitFlash > 0 ? 'hit-flash' : ''}`}
-              style={{
-                left: e.x,
-                top: e.y,
-                transform: e.type === 'ghost' || e.type === 'dragon'
-                  ? `scaleX(${e.dir > 0 ? -1 : 1})`
-                  : undefined,
-              }}
+              key={item._id}
+              ref={(el) => { item._el = el }}
+              className={`item item-${item.type}`}
+              style={{ left: item.x, top: item.y }}
+            >
+              {ITEM_EMOJI[item.type]}
+            </div>
+          ))}
+
+          {/* Feinde (frozen + hit-flash + ghost/dragon-Spiegelung in applyVisuals) */}
+          {s.enemies.map((e) => (
+            <div
+              key={e._id}
+              ref={(el) => { e._el = el }}
+              className={`enemy enemy-${e.type}`}
+              style={{ left: e.x, top: e.y }}
             >
               {ENEMY_EMOJI[e.type]}
             </div>
           ))}
 
           {/* Gegner-Projektile */}
-          {s.enemyProjectiles.map((ep, i) => (
+          {s.enemyProjectiles.map((ep) => (
             <div
-              key={`ep${i}`}
+              key={ep._id}
+              ref={(el) => { ep._el = el }}
               className={`enemy-projectile ep-${ep.kind}`}
               style={{ left: ep.x, top: ep.y }}
             >
@@ -2124,9 +2391,10 @@ export default function Game({ onExit, character = '🐈' }) {
           </div>
 
           {/* Projektile */}
-          {s.projectiles.map((proj, i) => (
+          {s.projectiles.map((proj) => (
             <div
-              key={`p${i}`}
+              key={proj._id}
+              ref={(el) => { proj._el = el }}
               className={`projectile projectile-${proj.type}`}
               style={{ left: proj.x, top: proj.y }}
             >
@@ -2134,140 +2402,65 @@ export default function Game({ onExit, character = '🐈' }) {
             </div>
           ))}
 
-          {/* Hexer-Schild Blase (vor dem Spieler gezeichnet, damit die Katze obenauf bleibt) */}
-          {s.bombShield > 0 && (
-            <div
-              className="bombshield-bubble"
-              style={{ left: p.x - 14, top: p.y - 14 }}
-            />
-          )}
-
-          {/* Schatten unter dem Spieler */}
+          {/* Hexer-Schild Blase: immer im Baum, applyVisuals toggelt Sichtbarkeit */}
           <div
+            ref={bombShieldBubbleRef}
+            className="bombshield-bubble"
+            style={{ display: 'none' }}
+          />
+
+          {/* Schatten unter dem Spieler — Position via applyVisuals */}
+          <div
+            ref={playerShadowRef}
             className="player-shadow"
             style={{
               left: p.x + PLAYER_W / 2 - 18,
               top: GROUND_Y - 4,
-              opacity: p.onGround ? 0.5 : Math.max(0.15, 0.5 - (GROUND_Y - p.y - PLAYER_H) / 400),
             }}
           />
 
           {/* Pups-Wolken (Niki) */}
-          {s.fartClouds && s.fartClouds.map((f, i) => (
+          {s.fartClouds && s.fartClouds.map((f) => (
             <div
-              key={`fc${i}`}
+              key={f._id}
+              ref={(el) => { f._el = el }}
               className="fart-cloud"
-              style={{
-                left: f.x,
-                top: f.y,
-                opacity: Math.max(0, f.life / 60),
-                transform: `scale(${f.scale + f.age / 100})`,
-              }}
+              style={{ left: f.x, top: f.y }}
             >
               💨
             </div>
           ))}
 
-          {/* Spieler */}
-          {(() => {
-            const isNiki = character === '🦜'
-            const nikiWobble = isNiki ? Math.sin(Date.now() / 90) * 10 : 0
-            const idleBob = !isNiki && p.onGround && p.vx === 0 ? Math.sin(Date.now() / 400) * 0.04 : 0
-            const runBob = p.onGround && p.vx !== 0 ? Math.sin(Date.now() / 80) * 0.06 : 0
-            const scaleY = 1 + idleBob - Math.abs(runBob)
-            // Emojis schauen meist nach links → bei facing=+1 (nach rechts) flippen
-            const scaleX = (1 + Math.abs(runBob) * 0.5) * (-p.facing)
-            const isRunning = p.onGround && p.vx !== 0
-            // Charaktere bleiben pure Emojis — keine extra Beine/Schwanz mehr
-            const showLegs = false
-            return (
-              <>
-                <div
-                  className={[
-                    'player',
-                    isNiki && 'niki',
-                    p.invincibleFrames > 0 && 'hurt',
-                    s.superJumpFrames > 0 && 'powered',
-                    s.power && `power-${s.power}`,
-                    p.spinFrames > 0 && 'spin',
-                    p.slamming && 'slam',
-                    s.rainbowFrames > 0 && 'rainbow',
-                    s.shield && 'has-shield',
-                    s.featherFrames > 0 && 'flying',
-                    s.landFlashFrames > 0 && 'landed',
-                  ].filter(Boolean).join(' ')}
-                  style={{
-                    left: p.x,
-                    top: p.y,
-                    transform: `scaleX(${scaleX}) scaleY(${scaleY}) rotate(${nikiWobble}deg)`,
-                  }}
-                >
-                  {character}
-                </div>
-                {/* Ganzer Körper: 4 Hufe (Trab-Pattern) + Schwanz auf der Rück-Seite */}
-                {showLegs && (() => {
-                  const legY = p.y + PLAYER_H - 4
-                  const tailRight = p.facing > 0 // läuft rechts → Schwanz hinten = links
-                  return (
-                    <>
-                      {/* Schwanz: kleiner gebogener Strich an der hinteren Körperhälfte */}
-                      <div
-                        className={`player-tail ${isRunning ? 'wagging' : ''} ${tailRight ? 'tail-left' : 'tail-right'}`}
-                        style={{
-                          left: tailRight ? p.x - 8 : p.x + PLAYER_W,
-                          top: p.y + PLAYER_H / 2 - 4,
-                        }}
-                      />
-                      {/* 4 Hufe: vorne-aussen, vorne-innen, hinten-innen, hinten-aussen */}
-                      {/* Trab-Pattern: 0+3 (FL+BR) gleichzeitig, 1+2 (FR+BL) gegenphasig */}
-                      {[
-                        { idx: 0, x: p.x + 4 },
-                        { idx: 1, x: p.x + 12 },
-                        { idx: 2, x: p.x + PLAYER_W - 20 },
-                        { idx: 3, x: p.x + PLAYER_W - 12 },
-                      ].map((leg) => {
-                        const phase = (leg.idx === 0 || leg.idx === 3) ? 'phase-a' : 'phase-b'
-                        return (
-                          <div
-                            key={`leg${leg.idx}`}
-                            className={`player-leg ${isRunning ? `running ${phase}` : ''}`}
-                            style={{ left: leg.x, top: legY }}
-                          />
-                        )
-                      })}
-                    </>
-                  )
-                })()}
-              </>
-            )
-          })()}
-          {p.slamming && (
-            <div
-              className="slam-trail"
-              style={{ left: p.x, top: p.y + PLAYER_H, width: PLAYER_W }}
-            />
-          )}
+          {/* Spieler — Position, Wackel-Skalierung und State-Klassen werden in applyVisuals gesetzt */}
+          <div
+            ref={playerRef}
+            className={`player ${character === '🦜' ? 'niki' : ''}`}
+            style={{ left: p.x, top: p.y }}
+          >
+            {character}
+          </div>
 
-          {s.bombShield > 0 && (
-            <div
-              className="bombshield-count"
-              style={{ left: p.x + PLAYER_W / 2 - 14, top: p.y - 22 }}
-            >
-              {s.bombShield}
-            </div>
-          )}
+          {/* Slam-Trail: immer im Baum, applyVisuals toggelt Sichtbarkeit */}
+          <div
+            ref={slamTrailRef}
+            className="slam-trail"
+            style={{ width: PLAYER_W, display: 'none' }}
+          />
 
-          {/* Schwebende Punkte-Texte */}
-          {s.floatingTexts.map((ft, i) => (
+          {/* Hexer-Schild Zähler: immer im Baum, applyVisuals toggelt Sichtbarkeit */}
+          <div
+            ref={bombShieldCountRef}
+            className="bombshield-count"
+            style={{ display: 'none' }}
+          />
+
+          {/* Schwebende Punkte-Texte (Position/Opacity in applyVisuals) */}
+          {s.floatingTexts.map((ft) => (
             <div
-              key={`ft${i}`}
+              key={ft._id}
+              ref={(el) => { ft._el = el }}
               className="floating-text"
-              style={{
-                left: ft.x,
-                top: ft.y,
-                color: ft.color,
-                opacity: Math.max(0, 1 - ft.age / 50),
-              }}
+              style={{ left: ft.x, top: ft.y, color: ft.color }}
             >
               {ft.text}
             </div>
