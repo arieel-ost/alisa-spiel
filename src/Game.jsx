@@ -2096,21 +2096,17 @@ export default function Game({ onExit, character = '🐈' }) {
       </div>
       </div>
 
-      {/* Grosser Menu-Button fur Handy (oben mittig im Spielfeld) */}
-      <button
-        className="touch-menu-btn"
-        onPointerDown={(e) => { e.preventDefault(); setMenuOpen(true) }}
-        onContextMenu={(e) => e.preventDefault()}
-        aria-label="Menü"
-      >
-        📋 Menü
-      </button>
-
       {/* Touch-Steuerung für Handy */}
       <div className="touch-controls" aria-hidden="true">
         <div className="touch-pad-left">
           <button className="touch-btn touch-arrow" {...touchProps('ArrowLeft')}>◀</button>
           <button className="touch-btn touch-arrow" {...touchProps('ArrowRight')}>▶</button>
+          <button
+            className="touch-btn touch-menu-circle"
+            onPointerDown={(e) => { e.preventDefault(); setMenuOpen(true) }}
+            onContextMenu={(e) => e.preventDefault()}
+            aria-label="Menü"
+          >M</button>
         </div>
         <div className="touch-pad-center">
           <button
