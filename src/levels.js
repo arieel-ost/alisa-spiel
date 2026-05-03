@@ -10,6 +10,7 @@
 const HANDCRAFTED = [
   {
     name: 'Wiese',
+    decor: 'meadow',
     bgColor: 'linear-gradient(180deg, #87ceeb 0%, #b8e6f5 70%, #c5e8a8 100%)',
     width: 1600,
     platforms: [
@@ -54,6 +55,7 @@ const HANDCRAFTED = [
   },
   {
     name: 'Wolken',
+    decor: 'clouds',
     bgColor: 'linear-gradient(180deg, #ffd6e7 0%, #fff6cc 70%, #c8f0ff 100%)',
     width: 1800,
     platforms: [
@@ -107,6 +109,7 @@ const HANDCRAFTED = [
   },
   {
     name: 'Berggipfel',
+    decor: 'mountains',
     bgColor: 'linear-gradient(180deg, #4a4e69 0%, #9a8c98 60%, #f2e9e4 100%)',
     width: 2000,
     platforms: [
@@ -174,6 +177,7 @@ const HANDCRAFTED = [
   },
   {
     name: 'Dunkler Wald',
+    decor: 'forest',
     bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
     width: 2000,
     platforms: [
@@ -239,6 +243,7 @@ const HANDCRAFTED = [
   },
   {
     name: 'Drachenburg',
+    decor: 'castle',
     bgColor: 'linear-gradient(180deg, #450a0a 0%, #7f1d1d 40%, #b91c1c 80%, #fbbf24 100%)',
     width: 2200,
     platforms: [
@@ -317,17 +322,26 @@ const HANDCRAFTED = [
 // ----------------------------------------------------------------------
 
 const THEMES = [
-  { name: 'Eishöhle', bgColor: 'linear-gradient(180deg, #0c4a6e 0%, #0ea5e9 50%, #e0f2fe 100%)', enemies: ['bat', 'ghost', 'monster'] },
-  { name: 'Wüste', bgColor: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%)', enemies: ['bug', 'wizard', 'dragon'] },
-  { name: 'Tiefe Höhle', bgColor: 'linear-gradient(180deg, #18181b 0%, #3f3f46 50%, #71717a 100%)', enemies: ['bat', 'wizard', 'ghost'] },
-  { name: 'Weltraum', bgColor: 'linear-gradient(180deg, #020617 0%, #1e293b 50%, #6366f1 100%)', enemies: ['bat', 'dragon', 'ghost'] },
-  { name: 'Regenbogen-Land', bgColor: 'linear-gradient(180deg, #ec4899 0%, #fbbf24 30%, #4ade80 60%, #38bdf8 80%, #a855f7 100%)', enemies: ['dragon', 'wizard', 'ghost'] },
-  // Wiederholungen für höhere Levels mit härteren Gegner-Mischungen
-  { name: 'Vulkan', bgColor: 'linear-gradient(180deg, #450a0a 0%, #ef4444 50%, #fbbf24 100%)', enemies: ['dragon', 'wizard', 'ghost'] },
-  { name: 'Schloss-Garten', bgColor: 'linear-gradient(180deg, #6b21a8 0%, #c084fc 60%, #fce7f3 100%)', enemies: ['wizard', 'ghost', 'bat'] },
-  { name: 'Sumpf', bgColor: 'linear-gradient(180deg, #14532d 0%, #65a30d 50%, #a3e635 100%)', enemies: ['bug', 'wizard', 'ghost'] },
-  { name: 'Sternenmeer', bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #6366f1 50%, #c4b5fd 100%)', enemies: ['ghost', 'dragon', 'bat'] },
-  { name: 'Endkampf', bgColor: 'linear-gradient(180deg, #18181b 0%, #ef4444 30%, #f97316 60%, #fde047 100%)', enemies: ['dragon', 'wizard', 'ghost'] },
+  // Welt 1: Eishöhle (6-15) — moderate
+  { name: 'Eishöhle', decor: 'snow', bgColor: 'linear-gradient(180deg, #0c4a6e 0%, #0ea5e9 50%, #e0f2fe 100%)', enemies: ['bat', 'ghost', 'monster', 'zombie'] },
+  // Welt 2: Wüste (16-25) — Skorpione!
+  { name: 'Wüste', decor: 'sand', bgColor: 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%)', enemies: ['bug', 'wizard', 'scorpion', 'dragon'] },
+  // Welt 3: Tiefe Höhle — Skelette!
+  { name: 'Tiefe Höhle', decor: 'cave', bgColor: 'linear-gradient(180deg, #18181b 0%, #3f3f46 50%, #71717a 100%)', enemies: ['bat', 'wizard', 'ghost', 'skeleton'] },
+  // Welt 4: Weltraum — Adler!
+  { name: 'Weltraum', decor: 'stars', bgColor: 'linear-gradient(180deg, #020617 0%, #1e293b 50%, #6366f1 100%)', enemies: ['bat', 'dragon', 'ghost', 'eagle'] },
+  // Welt 5: Regenbogen-Land
+  { name: 'Regenbogen-Land', decor: 'rainbow', bgColor: 'linear-gradient(180deg, #ec4899 0%, #fbbf24 30%, #4ade80 60%, #38bdf8 80%, #a855f7 100%)', enemies: ['dragon', 'wizard', 'ghost', 'eagle', 'scorpion'] },
+  // Welt 6: Vulkan — Oger!
+  { name: 'Vulkan', decor: 'lava', bgColor: 'linear-gradient(180deg, #450a0a 0%, #ef4444 50%, #fbbf24 100%)', enemies: ['dragon', 'wizard', 'ogre', 'skeleton'] },
+  // Welt 7: Schloss-Garten — Zombies!
+  { name: 'Schloss-Garten', decor: 'castle', bgColor: 'linear-gradient(180deg, #6b21a8 0%, #c084fc 60%, #fce7f3 100%)', enemies: ['wizard', 'ghost', 'zombie', 'eagle'] },
+  // Welt 8: Sumpf
+  { name: 'Sumpf', decor: 'swamp', bgColor: 'linear-gradient(180deg, #14532d 0%, #65a30d 50%, #a3e635 100%)', enemies: ['bug', 'zombie', 'wizard', 'skeleton', 'scorpion'] },
+  // Welt 9: Sternenmeer
+  { name: 'Sternenmeer', decor: 'stars', bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #6366f1 50%, #c4b5fd 100%)', enemies: ['ghost', 'dragon', 'eagle', 'skeleton'] },
+  // Welt 10: Endkampf — alles!
+  { name: 'Endkampf', decor: 'lava', bgColor: 'linear-gradient(180deg, #18181b 0%, #ef4444 30%, #f97316 60%, #fde047 100%)', enemies: ['dragon', 'wizard', 'ghost', 'ogre', 'eagle', 'skeleton', 'zombie', 'scorpion'] },
 ]
 
 function seededRandom(seed) {
@@ -433,12 +447,27 @@ function generateLevel(index) {
       enemy = { type: 'ghost', x: baseX, y: Math.floor(150 + rng() * 100) }
     } else if (enemyType === 'dragon') {
       enemy = { type: 'dragon', x: baseX, y: Math.floor(80 + rng() * 80), range: 100 + Math.floor(rng() * 80) }
+    } else if (enemyType === 'zombie') {
+      enemy = { type: 'zombie', x: baseX, y: 400, range: 50 + Math.floor(rng() * 60), hp: 2 }
+    } else if (enemyType === 'skeleton') {
+      enemy = { type: 'skeleton', x: baseX, y: 384, range: 60 + Math.floor(rng() * 70), hp: 2 }
+    } else if (enemyType === 'eagle') {
+      enemy = { type: 'eagle', x: baseX, y: Math.floor(70 + rng() * 70), range: 110 + Math.floor(rng() * 80) }
+    } else if (enemyType === 'ogre') {
+      enemy = { type: 'ogre', x: baseX, y: 396, range: 50 + Math.floor(rng() * 60), hp: 3 }
+    } else if (enemyType === 'scorpion') {
+      enemy = { type: 'scorpion', x: baseX, y: 405, range: 60 + Math.floor(rng() * 60), hp: 2 }
+    }
+    // Elite-Buff in höheren Welten: 20% Chance auf +1 HP
+    if (worldIdx >= 5 && enemy && rng() < 0.2) {
+      enemy.hp = (enemy.hp || 1) + 1
     }
     enemies.push(enemy)
   }
 
   return {
     name: theme.name,
+    decor: theme.decor,
     bgColor: theme.bgColor,
     width,
     platforms,

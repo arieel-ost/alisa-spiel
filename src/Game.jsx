@@ -34,11 +34,25 @@ const ENEMY_EMOJI = {
   wizard: '🧙',
   ghost: '👻',
   dragon: '🐉',
+  zombie: '🧟',
+  skeleton: '💀',
+  eagle: '🦅',
+  ogre: '👹',
+  scorpion: '🦂',
 }
 
 const ENEMY_PROJECTILE_EMOJI = {
   bolt: '🔮',
   fireball: '🔥',
+  bone: '🦴',
+}
+
+// Trefferpunkte pro Typ (Standard 1)
+const ENEMY_HP = {
+  zombie: 2,
+  skeleton: 2,
+  scorpion: 2,
+  ogre: 3,
 }
 
 const ITEM_EMOJI = {
@@ -162,6 +176,11 @@ export default function Game({ onExit, character = '🐈' }) {
         dir: 1,
         bobPhase: Math.random() * Math.PI * 2,
         shootTimer: 60 + Math.floor(Math.random() * 60),
+        hp: e.hp || ENEMY_HP[e.type] || 1,
+        maxHp: e.hp || ENEMY_HP[e.type] || 1,
+        hitFlash: 0,
+        diving: false,
+        diveCooldown: 0,
       })),
       enemyProjectiles: [],
       camera: 0,
@@ -230,7 +249,7 @@ export default function Game({ onExit, character = '🐈' }) {
   useEffect(() => {
     const down = (e) => {
       keysRef.current[e.key] = true
-      if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'x', 'X', 's', 'S'].includes(e.key)) {
+      if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'x', 'X', 's', 'S', 'a', 'A'].includes(e.key)) {
         e.preventDefault()
       }
       // 9 oder Numpad-9 → Level neu starten
@@ -241,6 +260,10 @@ export default function Game({ onExit, character = '🐈' }) {
       if (e.key === 'p' || e.key === 'P') {
         if (stateRef.current) stateRef.current.bombShield = 3
         setBombShield(3)
+      }
+      // A → Level überspringen
+      if (e.key === 'a' || e.key === 'A') {
+        skipLevel()
       }
     }
     const up = (e) => {
@@ -693,15 +716,19 @@ export default function Game({ onExit, character = '🐈' }) {
           }
         }
 
-        // Feinde treffen
+        // Feinde treffen — Projektile machen 1 Schaden
         if (!proj.dead) {
           for (const e of s.enemies) {
             const er = { x: e.x, y: e.y, w: ENEMY_W, h: ENEMY_H }
             if (rectsOverlap(pjr, er) && !e.dead) {
-              e.dead = true
+              e.hp -= 1
+              e.hitFlash = 10
               proj.dead = true
-              setScore((n) => n + 2)
-              setTotalScore((n) => n + 2)
+              if (e.hp <= 0) {
+                e.dead = true
+                setScore((n) => n + 2)
+                setTotalScore((n) => n + 2)
+              }
               break
             }
           }
@@ -833,20 +860,80 @@ export default function Game({ onExit, character = '🐈' }) {
             })
             e.shootTimer = 80 + Math.floor(Math.random() * 40)
           }
+        } else if (e.type === 'zombie') {
+          // Zombie: langsamer als Monster
+          e.x += e.dir * 0.55
+          if (e.x > e.startX + e.range) e.dir = -1
+          if (e.x < e.startX - e.range) e.dir = 1
+        } else if (e.type === 'ogre') {
+          // Oger: gross und langsam
+          e.x += e.dir * 0.8
+          if (e.x > e.startX + e.range) e.dir = -1
+          if (e.x < e.startX - e.range) e.dir = 1
+        } else if (e.type === 'scorpion') {
+          // Skorpion: schneller als Käfer
+          e.x += e.dir * 1.7
+          if (e.x > e.startX + e.range) e.dir = -1
+          if (e.x < e.startX - e.range) e.dir = 1
+        } else if (e.type === 'skeleton') {
+          // Skelett: läuft, wirft Knochen im Bogen
+          e.x += e.dir * 1.0
+          if (e.x > e.startX + e.range) e.dir = -1
+          if (e.x < e.startX - e.range) e.dir = 1
+          e.shootTimer -= 1
+          if (e.shootTimer <= 0) {
+            s.enemyProjectiles.push({
+              kind: 'bone',
+              x: e.x,
+              y: e.y - 6,
+              vx: e.dir * 4,
+              vy: -8,
+              life: 130,
+              gravity: true,
+            })
+            e.shootTimer = 110 + Math.floor(Math.random() * 50)
+          }
+        } else if (e.type === 'eagle') {
+          // Adler: fliegt seitlich, taucht runter wenn der Spieler darunter ist
+          if (!e.diving) {
+            e.x += e.dir * 2.4
+            if (e.x > e.startX + e.range) e.dir = -1
+            if (e.x < e.startX - e.range) e.dir = 1
+            e.bobPhase += 0.06
+            e.y = e.startY + Math.sin(e.bobPhase) * 12
+            const horizDist = Math.abs((p.x + PLAYER_W / 2) - (e.x + ENEMY_W / 2))
+            if (horizDist < 70 && p.y > e.y + 110 && e.diveCooldown === 0) {
+              e.diving = true
+            }
+          } else {
+            e.y += 6
+            if (e.y > GROUND_Y - ENEMY_H - 10 || e.y > p.y + 80) {
+              e.diving = false
+              e.diveCooldown = 90
+              e.startY = Math.max(60, Math.floor(80 + Math.random() * 60))
+              e.y = e.startY
+            }
+          }
+          if (e.diveCooldown > 0) e.diveCooldown -= 1
         } else {
           // Monster: normal
           e.x += e.dir * 1.2
           if (e.x > e.startX + e.range) e.dir = -1
           if (e.x < e.startX - e.range) e.dir = 1
         }
+        if (e.hitFlash > 0) e.hitFlash -= 1
 
         const er = { x: e.x, y: e.y, w: ENEMY_W, h: ENEMY_H }
         if (rectsOverlap(pr, er)) {
-          // Bodenstoss besiegt JEDEN Gegner aus jeder Richtung
+          // Bodenstoss: 3 Schaden (besiegt fast alle in einem Schlag)
           if (p.slamming) {
-            e.dead = true
-            setScore((n) => n + 3)
-            setTotalScore((n) => n + 3)
+            e.hp -= 3
+            e.hitFlash = 10
+            if (e.hp <= 0) {
+              e.dead = true
+              setScore((n) => n + 3)
+              setTotalScore((n) => n + 3)
+            }
             continue
           }
           // Regenbogen-Power: Gegner einfach durchrennen (sterben)
@@ -866,12 +953,16 @@ export default function Game({ onExit, character = '🐈' }) {
             p.vy = -6
             continue
           }
-          // Drauf-Springen besiegt JEDEN Gegner (auch Geister, Hexer, Drachen, Fledermäuse)
+          // Drauf-Springen: 1 Schaden
           if (p.vy > 2 && p.y + PLAYER_H - p.vy <= e.y + 6) {
-            e.dead = true
+            e.hp -= 1
+            e.hitFlash = 10
             p.vy = -10
-            setScore((n) => n + 2)
-            setTotalScore((n) => n + 2)
+            if (e.hp <= 0) {
+              e.dead = true
+              setScore((n) => n + 2)
+              setTotalScore((n) => n + 2)
+            }
           } else if (!e.dead && p.invincibleFrames === 0) {
             // Schild blockt einen Treffer
             if (s.shield) {
@@ -904,6 +995,7 @@ export default function Game({ onExit, character = '🐈' }) {
         if (!frozen) {
           ep.x += ep.vx
           ep.y += ep.vy
+          if (ep.gravity) ep.vy += 0.45 // Knochen fliegen im Bogen
           ep.life -= 1
         }
         const epr = { x: ep.x, y: ep.y, w: 24, h: 24 }
@@ -1008,6 +1100,14 @@ export default function Game({ onExit, character = '🐈' }) {
     setScore(0)
     setLives(5)
     setResetTrigger((t) => t + 1)
+  }
+
+  const skipLevel = () => {
+    setStatus('playing')
+    setStars(0)
+    setScore(0)
+    setLives(5)
+    setLevelIndex((i) => Math.min(i + 1, LEVELS.length - 1))
   }
 
   const startCountdown = () => {
@@ -1162,12 +1262,10 @@ export default function Game({ onExit, character = '🐈' }) {
             transform: `translateX(${-s.camera}px)`,
           }}
         >
-          {/* Hintergrund-Wolken */}
-          <div className="cloud" style={{ left: 100, top: 60 }}>☁️</div>
-          <div className="cloud" style={{ left: 500, top: 100 }}>☁️</div>
-          <div className="cloud" style={{ left: 900, top: 50 }}>☁️</div>
-          <div className="cloud" style={{ left: 1300, top: 90 }}>☁️</div>
-          <div className="cloud" style={{ left: 1700, top: 70 }}>☁️</div>
+          {/* Hintergrund-Dekoration je nach Thema */}
+          <Decor decor={level.decor} width={level.width} />
+          {/* Boden-Vegetation */}
+          <BackgroundFlair decor={level.decor} width={level.width} />
 
           {/* Boden */}
           <div
@@ -1253,7 +1351,7 @@ export default function Game({ onExit, character = '🐈' }) {
           {s.enemies.map((e, i) => (
             <div
               key={`e${i}`}
-              className={`enemy enemy-${e.type} ${s.freezeFrames > 0 ? 'frozen' : ''}`}
+              className={`enemy enemy-${e.type} ${s.freezeFrames > 0 ? 'frozen' : ''} ${e.hitFlash > 0 ? 'hit-flash' : ''}`}
               style={{
                 left: e.x,
                 top: e.y,
@@ -1425,7 +1523,7 @@ export default function Game({ onExit, character = '🐈' }) {
       </div>
 
       <div className="controls-hint">
-        ⬅️ ➡️ Laufen · ⬆️ / Leertaste <strong>2× springen</strong> 💫 · ⬇️ Bodenstoss 💥 · <strong>X</strong> Schiessen 🔥❄️ · <strong>9</strong> Level neu starten 🔄
+        ⬅️ ➡️ Laufen · ⬆️/Leertaste <strong>2× springen</strong> 💫 · ⬇️ Bodenstoss 💥 · <strong>X</strong> Schiessen 🔥❄️ · <strong>P</strong> Hexer-Schild 🧿 · <strong>9</strong> Neu starten 🔄 · <strong>A</strong> Level überspringen ⏭️
       </div>
 
       {status === 'won' && (
@@ -1457,5 +1555,89 @@ export default function Game({ onExit, character = '🐈' }) {
       )}
 
     </div>
+  )
+}
+
+// ----------------------------------------------------------------------
+// Hintergrund-Dekoration je nach Theme
+// ----------------------------------------------------------------------
+
+function Decor({ decor, width }) {
+  // Symbole im Hintergrund (zwischen Sky und Spielfeld)
+  const sets = {
+    meadow:    { symbols: ['☁️', '☁️', '🦋', '🌳', '🌻'], y: [50, 90, 140, 280, 380] },
+    clouds:    { symbols: ['☁️', '☁️', '☁️', '☁️', '🌈'], y: [50, 90, 130, 60, 30] },
+    mountains: { symbols: ['☁️', '🏔️', '🏔️', '⛰️', '🦅'], y: [50, 280, 220, 320, 130] },
+    forest:    { symbols: ['🌲', '🌲', '🦉', '🍄', '🌙'], y: [240, 290, 130, 380, 40] },
+    castle:    { symbols: ['🏰', '☁️', '🌋', '🔥', '🏯'], y: [220, 60, 280, 360, 240] },
+    snow:      { symbols: ['❄️', '❄️', '❄️', '⛄', '🏔️'], y: [40, 90, 140, 360, 240] },
+    sand:      { symbols: ['☀️', '🌵', '🐪', '🌵', '🦂'], y: [40, 360, 360, 340, 380] },
+    cave:      { symbols: ['💎', '🦇', '💎', '🪨', '🪨'], y: [80, 100, 140, 360, 380] },
+    stars:     { symbols: ['⭐', '🌟', '✨', '🪐', '🌙'], y: [60, 100, 80, 140, 50] },
+    rainbow:   { symbols: ['🌈', '🦋', '🌟', '🌸', '🌈'], y: [60, 130, 90, 360, 100] },
+    lava:      { symbols: ['🌋', '🔥', '🔥', '☄️', '💀'], y: [240, 360, 380, 80, 360] },
+    swamp:     { symbols: ['🍄', '🌿', '🪲', '🐸', '🌳'], y: [380, 360, 380, 380, 280] },
+  }
+  const set = sets[decor] || sets.meadow
+  // 7 Wiederholungen über die Levelbreite verteilt
+  const items = []
+  const count = 8
+  for (let i = 0; i < count; i++) {
+    const sym = set.symbols[i % set.symbols.length]
+    const baseY = set.y[i % set.y.length]
+    const x = Math.floor((i + 0.5) * (width / count) + ((i * 73) % 80) - 40)
+    items.push({ sym, x, y: baseY, key: `dec${i}` })
+  }
+  return (
+    <>
+      {items.map((it) => (
+        <div
+          key={it.key}
+          className="decor"
+          style={{ left: it.x, top: it.y }}
+        >
+          {it.sym}
+        </div>
+      ))}
+    </>
+  )
+}
+
+function BackgroundFlair({ decor, width }) {
+  // Boden-Pflänzchen / kleine Akzente direkt am Boden
+  const sets = {
+    meadow:    ['🌱', '🌷', '🌼'],
+    clouds:    ['☁️', '🌟'],
+    mountains: ['🪨', '🌿'],
+    forest:    ['🍄', '🌿', '🍃'],
+    castle:    ['🔥', '🪨'],
+    snow:      ['❄️', '🌨️'],
+    sand:      ['🌵', '🦴'],
+    cave:      ['🪨', '💎'],
+    stars:     ['✨', '⭐'],
+    rainbow:   ['🌈', '🌸', '🌟'],
+    lava:      ['🔥', '💀'],
+    swamp:     ['🌿', '🍄'],
+  }
+  const symbols = sets[decor] || sets.meadow
+  const count = Math.floor(width / 180)
+  const items = []
+  for (let i = 0; i < count; i++) {
+    const sym = symbols[i % symbols.length]
+    const x = Math.floor((i + 0.3) * (width / count) + ((i * 41) % 60) - 30)
+    items.push({ sym, x, key: `flair${i}` })
+  }
+  return (
+    <>
+      {items.map((it) => (
+        <div
+          key={it.key}
+          className="bg-flair"
+          style={{ left: it.x, top: 408 }}
+        >
+          {it.sym}
+        </div>
+      ))}
+    </>
   )
 }

@@ -997,7 +997,7 @@
   filter: drop-shadow(0 0 10px #ec4899) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
 }
 
-.cloud {
+.cloud, .decor {
   position: absolute;
   font-size: 50px;
   opacity: 0.85;
@@ -1005,13 +1005,94 @@
   animation: drift 12s ease-in-out infinite alternate;
 }
 
-.cloud:nth-child(2) { animation-duration: 14s; }
-.cloud:nth-child(3) { animation-duration: 10s; }
-.cloud:nth-child(4) { animation-duration: 16s; }
+.decor:nth-child(2n) { animation-duration: 14s; font-size: 44px; }
+.decor:nth-child(3n) { animation-duration: 10s; font-size: 56px; }
+.decor:nth-child(4n) { animation-duration: 16s; opacity: 0.7; }
+.decor:nth-child(5n) { animation-duration: 8s;  opacity: 0.95; }
 
 @keyframes drift {
   from { transform: translateX(0); }
   to { transform: translateX(20px); }
+}
+
+.bg-flair {
+  position: absolute;
+  font-size: 22px;
+  opacity: 0.85;
+  pointer-events: none;
+  animation: bgFlairBob 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes bgFlairBob {
+  from { transform: translateY(0) rotate(-3deg); }
+  to   { transform: translateY(-2px) rotate(3deg); }
+}
+
+/* Neue Gegner */
+.enemy-zombie {
+  font-size: 36px;
+  filter: drop-shadow(0 0 6px #65a30d) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4));
+  animation: zombieShuffle 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes zombieShuffle {
+  from { transform: translateY(0) rotate(-2deg); }
+  to   { transform: translateY(-1px) rotate(2deg); }
+}
+
+.enemy-skeleton {
+  font-size: 36px;
+  filter: drop-shadow(0 0 6px white) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4));
+  animation: skeletonRattle 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes skeletonRattle {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-2px); }
+}
+
+.enemy-eagle {
+  font-size: 38px;
+  filter: drop-shadow(0 0 8px #fbbf24) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4));
+  animation: eagleFlap 0.18s ease-in-out infinite alternate;
+}
+
+@keyframes eagleFlap {
+  from { transform: scaleY(1); }
+  to   { transform: scaleY(0.85); }
+}
+
+.enemy-ogre {
+  font-size: 42px;
+  filter: drop-shadow(0 0 10px #ef4444) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
+  animation: ogreStomp 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes ogreStomp {
+  from { transform: translateY(0) scale(1, 1); }
+  to   { transform: translateY(-2px) scale(1.05, 0.95); }
+}
+
+.enemy-scorpion {
+  font-size: 32px;
+  filter: drop-shadow(0 0 6px #f97316) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4));
+  animation: scorpionScuttle 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes scorpionScuttle {
+  from { transform: translateY(0) rotate(-3deg); }
+  to   { transform: translateY(-1px) rotate(3deg); }
+}
+
+/* Treffer-Aufblitzen */
+.enemy.hit-flash {
+  filter: brightness(3) saturate(0.5) drop-shadow(0 0 8px white) !important;
+}
+
+/* Knochen-Projektil */
+.enemy-projectile.ep-bone {
+  filter: drop-shadow(0 0 8px white);
+  animation: spin 0.4s linear infinite;
 }
 
 .controls-hint {

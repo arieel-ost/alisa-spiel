@@ -14,7 +14,7 @@ const CHARACTERS = [
   { emoji: '🐘', name: 'Elefant' },
   { emoji: '🐎', name: 'Pferd' },
   { emoji: '🦒', name: 'Giraffe' },
-  { emoji: '🐒', name: 'Affe' },
+  { emoji: '🐒', name: 'Alisa' },
   { emoji: '🦜', name: 'Niki', goofy: true },
 ]
 

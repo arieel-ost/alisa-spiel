@@ -16,22 +16,30 @@ const NOTE_FREQS = {
   C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.0, A3: 220.0, B3: 246.94,
 }
 
-// Eine einfache, fröhliche Melodie (16 Schritte, je 1/8 Note)
+// Abenteuer-Melodie in d-Moll (32 Schritte) — etwas kühner und groovier
 const MELODY = [
-  'E5', 'G5', 'C6', 'G5', 'A5', 'G5', 'E5', 'C5',
-  'D5', 'F5', 'A5', 'F5', 'G5', 'F5', 'D5', 'B4',
+  'D5', 'F5', 'A5', 'F5', 'D5', 'A4', 'D5', 'F5',
+  'C5', 'E5', 'G5', 'E5', 'C5', 'G4', 'C5', 'E5',
+  'D5', 'F5', 'A5', 'D6', 'A5', 'F5', 'D5', 'F5',
   'E5', 'G5', 'C6', 'B5', 'A5', 'G5', 'F5', 'E5',
-  'D5', 'E5', 'F5', 'G5', 'A5', 'G5', 'E5', 'C5',
 ]
 
 const BASS = [
+  'D3', 'D3', 'A3', 'A3', 'D3', 'D3', 'A3', 'A3',
   'C3', 'C3', 'G3', 'G3', 'C3', 'C3', 'G3', 'G3',
-  'F3', 'F3', 'C3', 'C3', 'F3', 'F3', 'C3', 'C3',
-  'C3', 'C3', 'G3', 'G3', 'A3', 'A3', 'E3', 'E3',
-  'F3', 'F3', 'G3', 'G3', 'C3', 'C3', 'G3', 'G3',
+  'D3', 'D3', 'A3', 'A3', 'F3', 'F3', 'A3', 'A3',
+  'C3', 'C3', 'G3', 'G3', 'A3', 'A3', 'D3', 'D3',
 ]
 
-const STEP_MS = 200 // ~120 BPM (1/8 Note)
+// kleine Begleit-Akkorde (Triade-Plonks) im Hintergrund auf jedem Beat
+const CHORDS = [
+  ['D4', 'F4'], null, null, null, ['A4', 'D5'], null, null, null,
+  ['C4', 'E4'], null, null, null, ['G4', 'C5'], null, null, null,
+  ['D4', 'F4'], null, null, null, ['A4', 'F5'], null, null, null,
+  ['C4', 'E4'], null, null, null, ['A4', 'C5'], null, null, null,
+]
+
+const STEP_MS = 175 // ~135 BPM, etwas energischer
 
 function playNote(freq, duration, type, vol) {
   if (!ctx) return
@@ -49,13 +57,20 @@ function playNote(freq, duration, type, vol) {
 
 function tick() {
   if (!ctx || muted) return
-  const melodyNote = MELODY[stepIndex % MELODY.length]
-  const bassNote = BASS[stepIndex % BASS.length]
+  const i = stepIndex % MELODY.length
+  const melodyNote = MELODY[i]
+  const bassNote = BASS[i]
+  const chord = CHORDS[i]
   if (melodyNote && NOTE_FREQS[melodyNote]) {
-    playNote(NOTE_FREQS[melodyNote], STEP_MS / 1000 * 0.9, 'square', 0.07)
+    playNote(NOTE_FREQS[melodyNote], STEP_MS / 1000 * 0.85, 'square', 0.08)
   }
   if (bassNote && NOTE_FREQS[bassNote] && stepIndex % 2 === 0) {
-    playNote(NOTE_FREQS[bassNote], STEP_MS / 1000 * 1.5, 'triangle', 0.15)
+    playNote(NOTE_FREQS[bassNote], STEP_MS / 1000 * 1.6, 'triangle', 0.16)
+  }
+  if (chord) {
+    for (const note of chord) {
+      if (NOTE_FREQS[note]) playNote(NOTE_FREQS[note], STEP_MS / 1000 * 0.7, 'sine', 0.04)
+    }
   }
   stepIndex += 1
 }
