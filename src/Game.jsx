@@ -2128,7 +2128,8 @@ export default function Game({ onExit, character = '🐈' }) {
             // Emojis schauen meist nach links → bei facing=+1 (nach rechts) flippen
             const scaleX = (1 + Math.abs(runBob) * 0.5) * (-p.facing)
             const isRunning = p.onGround && p.vx !== 0
-            const showLegs = p.onGround && !p.slamming && p.spinFrames === 0
+            // Einhorn hat schon einen kompletten Körper im Emoji — keine extra Hufe/Schwanz
+            const showLegs = p.onGround && !p.slamming && p.spinFrames === 0 && character !== '🦄'
             return (
               <>
                 <div
