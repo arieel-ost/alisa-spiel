@@ -83,6 +83,9 @@ const ITEM_EMOJI = {
   extinguisher: '🧯',  // Vulkan: Hazards harmlos 15s
   sword: '🗡️',         // Schloss: Beruhrungs-Tod fur Gegner 12s
   waterbottle: '💧',   // Wuste: sofort +1 Leben (max 9)
+  flashlight: '🔦',    // Hohle: alle Fledermause sterben sofort + 15s keine neuen
+  moon: '🌙',          // Sterne: niedrige Schwerkraft fur 12s
+  chili: '🌶️',         // Vulkan: Triple-Schuss Feuer fur 15s
 }
 
 const MAGNET_DURATION = 900 // 15 Sekunden
@@ -457,6 +460,9 @@ export default function Game({ onExit, character = '🐈' }) {
   const [rocketTime, setRocketTime] = useState(0)         // 🚀 Mega-Sprung
   const [extinguisherTime, setExtinguisherTime] = useState(0) // 🧯 Hazards harmlos
   const [swordTime, setSwordTime] = useState(0)           // 🗡️ Beruhrungs-Tod
+  const [flashlightTime, setFlashlightTime] = useState(0) // 🔦 Bats fliehen
+  const [moonTime, setMoonTime] = useState(0)             // 🌙 niedrige Gravity
+  const [chiliTime, setChiliTime] = useState(0)           // 🌶️ Triple-Feuer
   const [musicOn, setMusicOn] = useState(false)
   const [status, setStatus] = useState('playing') // playing | won | lost | finished
   const [, force] = useState(0)
@@ -547,6 +553,9 @@ export default function Game({ onExit, character = '🐈' }) {
       rocketFrames: 0,
       extinguisherFrames: 0,
       swordFrames: 0,
+      flashlightFrames: 0,
+      moonFrames: 0,
+      chiliFrames: 0,
       fallerTimer: 60,
       bombFlashFrames: 0,
       fartClouds: [],
@@ -589,6 +598,9 @@ export default function Game({ onExit, character = '🐈' }) {
     setRocketTime(0)
     setExtinguisherTime(0)
     setSwordTime(0)
+    setFlashlightTime(0)
+    setMoonTime(0)
+    setChiliTime(0)
     force((n) => n + 1)
   }, [levelIndex, resetTrigger])
 
@@ -763,8 +775,8 @@ export default function Game({ onExit, character = '🐈' }) {
         else p.vy = 0
         p.onGround = false // beim Fliegen nie als geerdet betrachten
       } else {
-        // Schwerkraft
-        p.vy += GRAVITY
+        // Schwerkraft (Mond reduziert auf 40%)
+        p.vy += s.moonFrames > 0 ? GRAVITY * 0.4 : GRAVITY
       }
 
       // Feder: Gleitflug nach vorne (langsamer Sinkflug + Vorwärtsschub)
@@ -1019,6 +1031,26 @@ export default function Game({ onExit, character = '🐈' }) {
               s.swordFrames = 720 // 12s
               setSwordTime(720)
               s.floatingTexts.push({ x: item.x, y: item.y, text: 'SCHWERT!', color: '#fde047', age: 0 })
+            } else if (item.type === 'flashlight') {
+              // Sofort: alle Bats verschwinden, fur 15s keine neuen Treffer
+              for (const e of s.enemies) {
+                if (!e.dead && e.type === 'bat') e.dead = true
+              }
+              s.flashlightFrames = 900 // 15s
+              setFlashlightTime(900)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: '🔦 LICHT!', color: '#fde047', age: 0 })
+            } else if (item.type === 'moon') {
+              s.moonFrames = 720 // 12s
+              setMoonTime(720)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'MOND!', color: '#c4b5fd', age: 0 })
+            } else if (item.type === 'chili') {
+              s.chiliFrames = 900 // 15s, dazu Fire-Power aktivieren
+              setChiliTime(900)
+              s.power = 'fire'
+              s.powerFrames = 900
+              setPower('fire')
+              setPowerTime(900)
+              s.floatingTexts.push({ x: item.x, y: item.y, text: 'CHILI! 3X', color: '#dc2626', age: 0 })
             } else if (item.type === 'mushroom') {
               s.superJumpFrames = SUPER_JUMP_DURATION
               setSuperJump(SUPER_JUMP_DURATION)
@@ -1150,6 +1182,21 @@ export default function Game({ onExit, character = '🐈' }) {
         s.swordFrames -= 1
         setSwordTime(s.swordFrames)
       }
+      // Taschenlampe-Timer (Bats werden in Enemy-Loop entfernt)
+      if (s.flashlightFrames > 0) {
+        s.flashlightFrames -= 1
+        setFlashlightTime(s.flashlightFrames)
+      }
+      // Mond-Schwerkraft-Timer
+      if (s.moonFrames > 0) {
+        s.moonFrames -= 1
+        setMoonTime(s.moonFrames)
+      }
+      // Chili-Timer (Triple-Schuss aktiv solange chiliFrames > 0)
+      if (s.chiliFrames > 0) {
+        s.chiliFrames -= 1
+        setChiliTime(s.chiliFrames)
+      }
       // Bomben-Blitz Animation
       if (s.bombFlashFrames > 0) {
         s.bombFlashFrames -= 1
@@ -1275,6 +1322,9 @@ export default function Game({ onExit, character = '🐈' }) {
       for (const e of s.enemies) {
         if (frozen) {
           // Eingefroren: Bewegung pausiert, Schiess-Timer pausiert — überspringen
+        } else if (e.type === 'bat' && s.flashlightFrames > 0) {
+          // Taschenlampe blendet Bats: sie verschwinden
+          e.dead = true
         } else if (e.type === 'bat') {
           // Fledermäuse fliegen seitlich + auf/ab
           e.x += e.dir * 1.6
@@ -2128,8 +2178,8 @@ export default function Game({ onExit, character = '🐈' }) {
             // Emojis schauen meist nach links → bei facing=+1 (nach rechts) flippen
             const scaleX = (1 + Math.abs(runBob) * 0.5) * (-p.facing)
             const isRunning = p.onGround && p.vx !== 0
-            // Einhorn hat schon einen kompletten Körper im Emoji — keine extra Hufe/Schwanz
-            const showLegs = p.onGround && !p.slamming && p.spinFrames === 0 && character !== '🦄'
+            // Charaktere bleiben pure Emojis — keine extra Beine/Schwanz mehr
+            const showLegs = false
             return (
               <>
                 <div

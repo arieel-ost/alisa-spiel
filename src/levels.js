@@ -369,18 +369,41 @@ const ITEM_POOL = [
   'lightning',
 ]
 
-// Theme-spezifische Bonus-Items: kommen ZUSÄTZLICH zum Pool, mit höherer
-// Wahrscheinlichkeit (mehrfach gelistet → öfter gewählt).
-const THEME_BONUS_ITEMS = {
-  snow:    ['skates', 'skates', 'skates'],         // Eishöhle: Schlittschuhe
-  sand:    ['waterbottle', 'waterbottle'],         // Wüste: Wasserflasche
-  cave:    ['waterbottle'],                        // Höhle: Wasser hilft auch
-  stars:   ['rocket', 'rocket', 'rocket'],         // Weltraum/Sterne: Rakete
-  rainbow: ['rocket'],
-  lava:    ['extinguisher', 'extinguisher', 'extinguisher'], // Vulkan: Löscher
-  castle:  ['sword', 'sword', 'sword'],            // Schloss: Schwert
-  swamp:   ['sword'],
-  // meadow / clouds / forest / mountains: kein Bonus
+// Universelle Items in JEDER Welt (Basis-Loot)
+const UNIVERSAL_ITEMS = [
+  'diamond', 'diamond',
+  'heart', 'heart',
+  'mushroom',
+  'crown',
+  'coinbag',
+  'magnet',
+  'shield',
+  'bomb',
+  'clock',
+]
+
+// Theme-spezifische Item-Pools — kuratiert: nur Items die in der Welt Sinn ergeben.
+// Mehrfach-Listing erhöht Wahrscheinlichkeit. Universelle Items sind überall dabei.
+const THEME_ITEM_POOL = {
+  meadow:    [...UNIVERSAL_ITEMS, 'fire', 'ice', 'rainbow', 'feather', 'lightning', 'wizardshield'],
+  clouds:    [...UNIVERSAL_ITEMS, 'feather', 'feather', 'feather', 'rainbow', 'lightning'],
+  mountains: [...UNIVERSAL_ITEMS, 'mushroom', 'mushroom', 'feather', 'rainbow'],
+  forest:    [...UNIVERSAL_ITEMS, 'feather', 'feather', 'mushroom', 'rainbow'],
+  castle:    [...UNIVERSAL_ITEMS, 'sword', 'sword', 'sword', 'wizardshield', 'wizardshield', 'lightning'],
+  // Eishöhle: Schlittschuhe + Eis-Power, KEIN Feuer (passt nicht), Wasser-Schutz
+  snow:      [...UNIVERSAL_ITEMS, 'skates', 'skates', 'skates', 'ice', 'ice', 'feather'],
+  // Wüste: Wasser sehr wichtig, Feuer-Power passt zur Hitze
+  sand:      [...UNIVERSAL_ITEMS, 'waterbottle', 'waterbottle', 'waterbottle', 'fire', 'mushroom'],
+  // Höhle: dunkel → Taschenlampe gegen Bats, plus Wasser
+  cave:      [...UNIVERSAL_ITEMS, 'flashlight', 'flashlight', 'flashlight', 'waterbottle', 'rainbow', 'fire'],
+  // Weltraum/Sterne: Raketen + Mond-Schwerkraft passen ins All
+  stars:     [...UNIVERSAL_ITEMS, 'rocket', 'rocket', 'rocket', 'moon', 'moon', 'lightning', 'feather'],
+  // Regenbogen: alles Magisches
+  rainbow:   [...UNIVERSAL_ITEMS, 'rainbow', 'rainbow', 'rainbow', 'rocket', 'lightning', 'crown'],
+  // Vulkan: Löscher gegen Lava, Feuer-Power, NEU Chili
+  lava:      [...UNIVERSAL_ITEMS, 'extinguisher', 'extinguisher', 'extinguisher', 'chili', 'chili', 'fire', 'fire'],
+  // Sumpf: Wasser-Schutz hilft, Pilze + Magie
+  swamp:     [...UNIVERSAL_ITEMS, 'mushroom', 'mushroom', 'rainbow', 'sword', 'waterbottle'],
 }
 
 function generateLevel(index) {
@@ -433,8 +456,8 @@ function generateLevel(index) {
     }
   }
 
-  // Theme-Bonus-Items mischen (haben hohere Wahrscheinlichkeit per Mehrfachlistung)
-  const themedPool = [...ITEM_POOL, ...(THEME_BONUS_ITEMS[theme.decor] || [])]
+  // Pro Welt eigener Item-Pool (kuratiert + Bonus-Items mehrfach gelistet)
+  const themedPool = THEME_ITEM_POOL[theme.decor] || ITEM_POOL
   const blocks = []
   const blockGap = (width - 400) / Math.max(1, numBlocks)
   for (let i = 0; i < numBlocks; i++) {
