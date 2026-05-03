@@ -90,11 +90,29 @@ function rectsOverlap(a, b) {
 }
 
 // ----------------------------------------------------------------
-// Lama-Modus (Auto-Play AI): einfache "best effort" Heuristik.
-// Mutiert keys direkt, damit normale Edge-Detection für Sprung greift.
+// Lama-Modus v2 (Auto-Play AI):
+//   - Stuck-Detection mit Recovery (Sprung + Rückwärts)
+//   - Wand-Erkennung (Plattformen + Blöcke auf Brusthöhe)
+//   - Hazard-Erkennung mit Doppelsprung-Heuristik
+//   - Stomp-Window für Bodengegner (60-95 px statt blind springen)
+//   - Bat-Korridor-Stop (statt rein in den Bat zu springen)
+//   - Eagle-Dive-Warning + Ghost-Proximity
+//   - Projektil-Dodge (bolt/fireball/bone, mit Trajectory-Vorhersage)
+//   - Item-Magnet für wertvolle Power-Ups
+//   - Glide mit Feder, präziser Schuss-Filter
+// AI mutiert keys direkt → Edge-Detection für Sprung greift wie bei Spieler.
 // ----------------------------------------------------------------
 function applyAutoPlay(keys, s, p, level, ai) {
-  // Reset alle AI-relevanten Tasten
+  // ----- AI-State pflegen -----
+  ai.framesSinceJump = (ai.framesSinceJump || 0) + 1
+  if (p.onGround && Math.abs(p.x - (ai.lastX ?? p.x)) < 0.4) {
+    ai.stuckFrames = (ai.stuckFrames || 0) + 1
+  } else {
+    ai.stuckFrames = 0
+  }
+  ai.lastX = p.x
+
+  // ----- Tasten leeren -----
   keys['ArrowLeft'] = false
   keys['ArrowRight'] = false
   keys['ArrowUp'] = false
@@ -102,55 +120,235 @@ function applyAutoPlay(keys, s, p, level, ai) {
   keys[' '] = false
   keys['x'] = false
 
-  ai.framesSinceJump += 1
+  // ----- Sammel-Ziel auswählen: nahester unhit Block > naher Stern > Goal -----
+  // Blacklist verhindert ewiges Steckenbleiben an unerreichbaren Zielen.
+  ai.blacklist = ai.blacklist || new Set()
+  ai.currentTargetKey = ai.currentTargetKey || null
+  ai.targetFrames = ai.targetFrames || 0
 
-  // Default: laufe nach rechts Richtung Goal
   const goal = level.goal
-  if (goal && p.x < goal.x - 30) {
-    keys['ArrowRight'] = true
-  } else if (goal && p.x > goal.x + 30) {
-    keys['ArrowLeft'] = true
-  }
+  const goalDx = goal ? goal.x - p.x : 1000
+  const SEARCH_RADIUS = 240
+  let target = null
+  let targetDist = SEARCH_RADIUS
+  let targetKey = null
 
-  // Look-ahead 130px voraus für Hazards & Plattform-Kanten & Enemies
-  const lookX = p.x + 130
-  let dangerAhead = false
-  let highDangerAhead = false // braucht Doppelsprung
-
-  // Hazards voraus → springen
-  for (const h of s.hazards) {
-    if (h.x + h.w > p.x + 40 && h.x < lookX && h.y < p.y + PLAYER_H + 10) {
-      dangerAhead = true
-      // Breite Hazards → Doppelsprung sicher nehmen
-      if (h.w > 90) highDangerAhead = true
+  // Erste Wahl: nicht-getroffener Block (Power-Up drin)
+  for (const b of s.blocks) {
+    if (b.hit) continue
+    const k = `b:${b.x}:${b.y}`
+    if (ai.blacklist.has(k)) continue
+    const dx = b.x - p.x
+    const d = Math.hypot(dx, b.y - p.y)
+    if (d < targetDist) {
+      targetDist = d
+      target = { x: b.x + BLOCK_SIZE / 2, y: b.y, kind: 'block' }
+      targetKey = k
     }
   }
 
-  // Enemies voraus (ausser Rainbow schützt)
-  if (s.rainbowFrames === 0) {
-    for (const e of s.enemies) {
-      if (e.dead) continue
-      const dx = e.x - p.x
-      // Bodengegner direkt davor: stomp wenn auf gleicher Höhe
-      if (dx > 30 && dx < 130 && e.y > p.y - 40 && e.y < p.y + PLAYER_H + 30) {
-        dangerAhead = true
+  // Zweite Wahl: ungesammelter Stern (kleiner Suchradius, Goal-Richtung priorisieren)
+  if (!target) {
+    let starDist = 200
+    for (const star of s.stars) {
+      if (star.taken) continue
+      const k = `s:${star.x}:${star.y}`
+      if (ai.blacklist.has(k)) continue
+      const dx = star.x - p.x
+      const d = Math.hypot(dx, star.y - p.y)
+      if (d < starDist) {
+        starDist = d
+        target = { x: star.x + STAR_SIZE / 2, y: star.y, kind: 'star' }
+        targetKey = k
       }
     }
   }
 
-  // Sprung: nur edge-press (1 Frame an), Cooldown 8 Frames
-  if (dangerAhead && ai.framesSinceJump > 8) {
-    if (p.onGround || (highDangerAhead && p.jumpsLeft > 0)) {
+  // Target-Tracking: wenn zu lange am gleichen Target → blacklist
+  if (target) {
+    if (targetKey !== ai.currentTargetKey) {
+      ai.currentTargetKey = targetKey
+      ai.targetFrames = 0
+    } else {
+      ai.targetFrames += 1
+      if (ai.targetFrames > 200) {
+        ai.blacklist.add(targetKey)
+        ai.currentTargetKey = null
+        ai.targetFrames = 0
+        target = null
+      }
+    }
+  } else {
+    ai.currentTargetKey = null
+    ai.targetFrames = 0
+  }
+
+  // Default-Richtung: target hat Vorrang vor goal
+  const dirDx = target ? target.x - p.x : goalDx
+  if (dirDx > 15) keys['ArrowRight'] = true
+  else if (dirDx < -15) keys['ArrowLeft'] = true
+
+  // Wenn target oben drüber & nahe → springen
+  if (target && p.onGround && ai.framesSinceJump > 6) {
+    const tdx = Math.abs(target.x - (p.x + PLAYER_W / 2))
+    const tdy = (p.y + PLAYER_H) - target.y // wie viel höher liegt das Target?
+    if (tdx < 50 && tdy > 30 && tdy < 180) {
       keys[' '] = true
       ai.framesSinceJump = 0
     }
   }
 
-  // Wenn fallend in Hazard-Höhe → Doppelsprung retten
-  if (!p.onGround && p.vy > 4 && p.jumpsLeft > 0 && ai.framesSinceJump > 6) {
-    // Nur wenn Hazard direkt unten/voraus
+  // ----- STUCK RECOVERY (Sicherheitsnetz, beendet Frame früh) -----
+  if (ai.stuckFrames > 18) {
+    if (ai.stuckFrames < 55) {
+      // Phase 1: Springen (vielleicht ist's nur eine Wand)
+      if (p.onGround && ai.framesSinceJump > 5) {
+        keys[' '] = true
+        ai.framesSinceJump = 0
+      }
+    } else if (ai.stuckFrames < 85) {
+      // Phase 2: Kurz rückwärts mit Sprung (Anlauf nehmen)
+      keys['ArrowRight'] = false
+      keys['ArrowLeft'] = goalDx > 0 // sonst andere Richtung
+      keys['ArrowRight'] = goalDx < 0
+      if (p.onGround && ai.framesSinceJump > 8) {
+        keys[' '] = true
+        ai.framesSinceJump = 0
+      }
+    } else {
+      ai.stuckFrames = 0 // reset, neuer Versuch
+    }
+    return
+  }
+
+  // ----- Hindernis-Detektion -----
+  let needJump = false
+  let needDoubleJump = false
+  let stompNow = false
+  let blockProjectile = false // Bat/Adler auf Spielerhöhe → kurz anhalten
+
+  // Wände: Plattformen + Blöcke auf Brusthöhe direkt vor Spieler.
+  // ZUSÄTZLICH: niedrige Plattformen (max ~100 px höher) werden als
+  // "Hop-Ziel" erkannt — AI springt drauf, auch wenn der Pfad sonst frei wäre.
+  // Das erlaubt Plattform-Parcours statt nur Boden-Lauf.
+  const lookEnd = p.x + PLAYER_W + 90
+  const playerFeet = p.y + PLAYER_H
+  for (const solid of level.platforms) {
+    const sh = solid.h || 20
+    const sx = solid.x
+    const sxEnd = solid.x + solid.w
+    const sy = solid.y
+    const syEnd = solid.y + sh
+    if (sxEnd < p.x || sx > lookEnd) continue
+    // Wand: solid in Spieler-Vertikalbereich
+    if (sy < playerFeet - 6 && syEnd > p.y + 4 && sx > p.x + PLAYER_W - 2) {
+      needJump = true
+      if (syEnd > p.y + 30) needDoubleJump = true
+    }
+    // Hop-Ziel: Plattform 30-110 px höher als Spieler-Füsse, vor uns, erreichbar
+    else if (p.onGround && sy < playerFeet - 30 && sy > playerFeet - 130 &&
+             sx > p.x + PLAYER_W - 8 && sx < p.x + PLAYER_W + 90) {
+      needJump = true
+      if (sy < playerFeet - 90) needDoubleJump = true
+    }
+  }
+  for (const b of s.blocks) {
+    if (b.hit) continue
+    if (b.x + BLOCK_SIZE < p.x || b.x > lookEnd) continue
+    if (b.y < playerFeet - 6 && b.y + BLOCK_SIZE > p.y + 4 && b.x > p.x + PLAYER_W - 2) {
+      needJump = true
+      if (b.y + BLOCK_SIZE > p.y + 30) needDoubleJump = true
+    }
+  }
+
+  // Hazards: drüber springen
+  for (const h of s.hazards) {
+    if (h.x + h.w > p.x + PLAYER_W - 4 && h.x < p.x + PLAYER_W + 110) {
+      if (h.y < p.y + PLAYER_H + 12) {
+        needJump = true
+        if (h.w > 80) needDoubleJump = true
+      }
+    }
+  }
+
+  // Gegner: differenziert behandeln
+  if (s.rainbowFrames === 0) {
+    for (const e of s.enemies) {
+      if (e.dead) continue
+      const dx = (e.x + ENEMY_W / 2) - (p.x + PLAYER_W / 2)
+      const dy = e.y - p.y
+      const isGround = e.y >= GROUND_Y - 60
+
+      // Bodengegner: Stomp-Window
+      if (isGround && dx > 20 && dx < 130) {
+        if (dx > 55 && dx < 95 && p.onGround && Math.abs(dy) < 60) {
+          stompNow = true
+        } else if (dx <= 55) {
+          // zu spät für Stomp → einfach drüber springen
+          needJump = true
+        }
+      }
+
+      // Fliegende Gegner auf Spielerhöhe ±25 px → STOPP, lass passieren
+      if (!isGround && dx > 0 && dx < 110 && Math.abs(dy) < 25) {
+        keys['ArrowLeft'] = false
+        keys['ArrowRight'] = false
+        blockProjectile = true
+      }
+
+      // Adler-Dive-Warnung: Adler 50-180 px über Spieler in Reichweite
+      if (e.type === 'eagle' && Math.abs(e.x - p.x) < 90 && dy < -50 && dy > -180) {
+        needJump = true
+        needDoubleJump = true
+      }
+
+      // Ghost in unmittelbarer Nähe → drauf springen
+      if (e.type === 'ghost') {
+        const gd = Math.hypot(e.x - p.x, e.y - p.y)
+        if (gd < 90) needJump = true
+      }
+    }
+  }
+
+  // Projektile-Dodge: 14-Frame-Trajektorie
+  for (const ep of s.enemyProjectiles) {
+    const T = 14
+    const tx = ep.x + ep.vx * T
+    // Knochen: ep.gravity true, vy steigt um 0.45/Frame → y-Vorhersage
+    const ty = ep.gravity
+      ? ep.y + ep.vy * T + 0.45 * T * T / 2
+      : ep.y + ep.vy * T
+    if (tx > p.x - 30 && tx < p.x + PLAYER_W + 30 &&
+        ty > p.y - 25 && ty < p.y + PLAYER_H + 25) {
+      // Kommt von oben? Drunter durchhuschen statt springen
+      if (ep.vy > 1.5) {
+        // weiterlaufen, vielleicht ducken (kein duck im Spiel, also einfach weiter)
+      } else {
+        needJump = true
+        if (Math.abs(ep.vx) > 4) needDoubleJump = true
+      }
+    }
+  }
+
+  // ----- Sprung-Logik -----
+  if (stompNow && ai.framesSinceJump > 6) {
+    keys[' '] = true
+    ai.framesSinceJump = 0
+  } else if (needJump && ai.framesSinceJump > 7) {
+    if (p.onGround) {
+      keys[' '] = true
+      ai.framesSinceJump = 0
+    } else if (needDoubleJump && p.jumpsLeft > 0 && p.vy > -3) {
+      // Zweiter Sprung erst wenn erster den Höhepunkt erreicht hat
+      keys[' '] = true
+      ai.framesSinceJump = 0
+    }
+  }
+
+  // Notfall-Doppelsprung wenn fallend über Hazard
+  if (!p.onGround && p.vy > 5 && p.jumpsLeft > 0 && ai.framesSinceJump > 6) {
     for (const h of s.hazards) {
-      if (h.x < p.x + PLAYER_W + 50 && h.x + h.w > p.x - 20 && h.y < p.y + 200) {
+      if (h.x < p.x + PLAYER_W + 60 && h.x + h.w > p.x - 20 && h.y < p.y + 220) {
         keys[' '] = true
         ai.framesSinceJump = 0
         break
@@ -158,21 +356,37 @@ function applyAutoPlay(keys, s, p, level, ai) {
     }
   }
 
-  // Glide mit Feder: in der Luft Sprung-Taste halten
+  // ----- Glide mit Feder -----
   if (s.featherFrames > 0 && !p.onGround && p.vy >= 0) {
     keys[' '] = true
   }
 
-  // Schiessen: wenn Fire/Ice aktiv und Gegner in Range
+  // ----- Schuss: präziser dy-Filter (Projektile fliegen horizontal) -----
   if (s.power === 'fire' || s.power === 'ice') {
     for (const e of s.enemies) {
       if (e.dead) continue
       const dx = e.x - p.x
       const dy = e.y - p.y
-      if (dx > 20 && dx < 280 && Math.abs(dy) < 90) {
+      // Direkt vor uns auf gleicher Höhe (±25 px)
+      if (dx > 20 && dx < 280 && Math.abs(dy) < 25) {
         keys['x'] = true
         break
       }
+    }
+  }
+
+  // ----- Item-Magnet für wertvolle Power-Ups -----
+  const wanted = new Set(['rainbow', 'wizardshield', 'shield', 'heart', 'feather', 'mushroom', 'crown', 'fire', 'ice', 'lightning', 'bomb', 'clock'])
+  for (const it of s.items) {
+    if (it.taken || !wanted.has(it.type)) continue
+    const dx = it.x - p.x
+    if (dx > -20 && dx < 90 && Math.abs(it.y - p.y) < 130) {
+      // Item höher als Spieler-Kopf → springen
+      if (it.y < p.y - 10 && p.onGround && ai.framesSinceJump > 6 && !needDoubleJump) {
+        keys[' '] = true
+        ai.framesSinceJump = 0
+      }
+      break
     }
   }
 }
@@ -219,6 +433,7 @@ export default function Game({ onExit, character = '🐈' }) {
   useEffect(() => {
     const level = LEVELS[levelIndex]
     keysRef.current = {} // gehaltene Tasten nicht ins neue Level lecken
+    aiStateRef.current = { framesSinceJump: 99, doubleJumpCooldown: 0, blacklist: new Set() }
     stateRef.current = {
       player: {
         x: 60,
