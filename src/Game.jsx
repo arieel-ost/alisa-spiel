@@ -2035,30 +2035,48 @@ export default function Game({ onExit, character = '🐈' }) {
             const idleBob = !isNiki && p.onGround && p.vx === 0 ? Math.sin(Date.now() / 400) * 0.04 : 0
             const runBob = p.onGround && p.vx !== 0 ? Math.sin(Date.now() / 80) * 0.06 : 0
             const scaleY = 1 + idleBob - Math.abs(runBob)
-            const scaleX = (1 + Math.abs(runBob) * 0.5) * p.facing
+            // Emojis schauen meist nach links → bei facing=+1 (nach rechts) flippen
+            const scaleX = (1 + Math.abs(runBob) * 0.5) * (-p.facing)
+            const isRunning = p.onGround && p.vx !== 0
+            const showLegs = p.onGround && !p.slamming && p.spinFrames === 0
             return (
-              <div
-                className={[
-                  'player',
-                  isNiki && 'niki',
-                  p.invincibleFrames > 0 && 'hurt',
-                  s.superJumpFrames > 0 && 'powered',
-                  s.power && `power-${s.power}`,
-                  p.spinFrames > 0 && 'spin',
-                  p.slamming && 'slam',
-                  s.rainbowFrames > 0 && 'rainbow',
-                  s.shield && 'has-shield',
-                  s.featherFrames > 0 && 'flying',
-                  s.landFlashFrames > 0 && 'landed',
-                ].filter(Boolean).join(' ')}
-                style={{
-                  left: p.x,
-                  top: p.y,
-                  transform: `scaleX(${scaleX}) scaleY(${scaleY}) rotate(${nikiWobble}deg)`,
-                }}
-              >
-                {character}
-              </div>
+              <>
+                <div
+                  className={[
+                    'player',
+                    isNiki && 'niki',
+                    p.invincibleFrames > 0 && 'hurt',
+                    s.superJumpFrames > 0 && 'powered',
+                    s.power && `power-${s.power}`,
+                    p.spinFrames > 0 && 'spin',
+                    p.slamming && 'slam',
+                    s.rainbowFrames > 0 && 'rainbow',
+                    s.shield && 'has-shield',
+                    s.featherFrames > 0 && 'flying',
+                    s.landFlashFrames > 0 && 'landed',
+                  ].filter(Boolean).join(' ')}
+                  style={{
+                    left: p.x,
+                    top: p.y,
+                    transform: `scaleX(${scaleX}) scaleY(${scaleY}) rotate(${nikiWobble}deg)`,
+                  }}
+                >
+                  {character}
+                </div>
+                {/* Animierte Beine — verstecken beim Springen/Slammen/Spin */}
+                {showLegs && (
+                  <>
+                    <div
+                      className={`player-leg leg-l ${isRunning ? 'running' : ''}`}
+                      style={{ left: p.x + 7, top: p.y + PLAYER_H - 6 }}
+                    />
+                    <div
+                      className={`player-leg leg-r ${isRunning ? 'running' : ''}`}
+                      style={{ left: p.x + PLAYER_W - 15, top: p.y + PLAYER_H - 6 }}
+                    />
+                  </>
+                )}
+              </>
             )
           })()}
           {p.slamming && (
