@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { LEVELS } from './levels'
 import { startMusic, stopMusic, setMuted, playSfx } from './audio'
 import './Game.css'
@@ -127,6 +127,7 @@ export default function Game({ onExit, character = '🐈' }) {
   // Initialisiere Level
   useEffect(() => {
     const level = LEVELS[levelIndex]
+    keysRef.current = {} // gehaltene Tasten nicht ins neue Level lecken
     stateRef.current = {
       player: {
         x: 60,
@@ -144,7 +145,7 @@ export default function Game({ onExit, character = '🐈' }) {
       prevDownKey: false,
       stars: level.stars.map((s) => ({ ...s, taken: false })),
       coins: (level.coins || []).map((c) => ({ ...c, taken: false })),
-      blocks: level.blocks.map((b) => ({
+      blocks: (level.blocks || []).map((b) => ({
         ...b,
         w: BLOCK_SIZE,
         h: BLOCK_SIZE,
@@ -169,7 +170,7 @@ export default function Game({ onExit, character = '🐈' }) {
       floatingTexts: [],
       landFlashFrames: 0,
       lastOnGround: true,
-      enemies: level.enemies.map((e) => ({
+      enemies: (level.enemies || []).map((e) => ({
         ...e,
         startX: e.x,
         startY: e.y,
@@ -244,6 +245,14 @@ export default function Game({ onExit, character = '🐈' }) {
       setMusicOn(true)
     }
   }
+
+  // Wenn alle Leben weg sind → Level neu starten
+  useEffect(() => {
+    if (lives <= 0 && status === 'playing') {
+      restartLevel()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lives, status])
 
   // Tastatur
   useEffect(() => {
@@ -977,14 +986,7 @@ export default function Game({ onExit, character = '🐈' }) {
             p.y = GROUND_Y - PLAYER_H
             p.vx = 0
             p.vy = 0
-            setLives((l) => {
-              const nl = l - 1
-              if (nl <= 0) {
-                restartLevel()
-                return 5
-              }
-              return nl
-            })
+            setLives((l) => Math.max(0, l - 1))
           }
         }
       }
@@ -1021,14 +1023,7 @@ export default function Game({ onExit, character = '🐈' }) {
             p.vx = 0
             p.vy = 0
             p.slamming = false
-            setLives((l) => {
-              const nl = l - 1
-              if (nl <= 0) {
-                restartLevel()
-                return 5
-              }
-              return nl
-            })
+            setLives((l) => Math.max(0, l - 1))
           }
         } else if (rectsOverlap(pr, epr) && s.rainbowFrames > 0) {
           ep.dead = true // Regenbogen löst Geschosse auf
@@ -1078,7 +1073,7 @@ export default function Game({ onExit, character = '🐈' }) {
 
     animRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(animRef.current)
-  }, [levelIndex, status])
+  }, [levelIndex, status, character])
 
   if (!stateRef.current) return null
 
@@ -1562,7 +1557,7 @@ export default function Game({ onExit, character = '🐈' }) {
 // Hintergrund-Dekoration je nach Theme
 // ----------------------------------------------------------------------
 
-function Decor({ decor, width }) {
+const Decor = memo(function Decor({ decor, width }) {
   // Symbole im Hintergrund (zwischen Sky und Spielfeld)
   const sets = {
     meadow:    { symbols: ['☁️', '☁️', '🦋', '🌳', '🌻'], y: [50, 90, 140, 280, 380] },
@@ -1601,9 +1596,9 @@ function Decor({ decor, width }) {
       ))}
     </>
   )
-}
+})
 
-function BackgroundFlair({ decor, width }) {
+const BackgroundFlair = memo(function BackgroundFlair({ decor, width }) {
   // Boden-Pflänzchen / kleine Akzente direkt am Boden
   const sets = {
     meadow:    ['🌱', '🌷', '🌼'],
@@ -1640,4 +1635,4 @@ function BackgroundFlair({ decor, width }) {
       ))}
     </>
   )
-}
+})

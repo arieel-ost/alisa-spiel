@@ -7,6 +7,7 @@ let timer = null
 let stepIndex = 0
 let started = false
 let muted = false
+let visibilityHandler = null
 
 // Notenfrequenzen (vereinfacht). Index → MIDI-ähnliche Tonhöhe
 const NOTE_FREQS = {
@@ -57,6 +58,7 @@ function playNote(freq, duration, type, vol) {
 
 function tick() {
   if (!ctx || muted) return
+  if (ctx.state !== 'running') return // Mobile/Tab-Switch: kein Audio anstossen wenn suspendiert
   const i = stepIndex % MELODY.length
   const melodyNote = MELODY[i]
   const bassNote = BASS[i]
@@ -84,6 +86,16 @@ export function startMusic() {
     masterGain.connect(ctx.destination)
     started = true
     timer = setInterval(tick, STEP_MS)
+    // iOS Safari & Co. suspendieren den Context beim Tab-Wechsel / Lock-Screen
+    visibilityHandler = () => {
+      if (!ctx) return
+      if (document.hidden) {
+        ctx.suspend().catch(() => {})
+      } else {
+        ctx.resume().catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', visibilityHandler)
   } catch (e) {
     // Audio nicht verfügbar
   }
@@ -93,6 +105,10 @@ export function stopMusic() {
   if (timer) {
     clearInterval(timer)
     timer = null
+  }
+  if (visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler)
+    visibilityHandler = null
   }
   if (ctx) {
     ctx.close().catch(() => {})
