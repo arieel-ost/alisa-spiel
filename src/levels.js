@@ -332,16 +332,16 @@ const THEMES = [
   { name: 'Weltraum', decor: 'stars', bgColor: 'linear-gradient(180deg, #020617 0%, #1e293b 50%, #6366f1 100%)', enemies: ['bat', 'dragon', 'ghost', 'eagle'], hazard: null },
   // Welt 5: Regenbogen-Land — fröhlich, keine Gruben
   { name: 'Regenbogen-Land', decor: 'rainbow', bgColor: 'linear-gradient(180deg, #ec4899 0%, #fbbf24 30%, #4ade80 60%, #38bdf8 80%, #a855f7 100%)', enemies: ['dragon', 'wizard', 'ghost', 'eagle', 'scorpion'], hazard: null },
-  // Welt 6: Vulkan — Lava!
-  { name: 'Vulkan', decor: 'lava', bgColor: 'linear-gradient(180deg, #450a0a 0%, #ef4444 50%, #fbbf24 100%)', enemies: ['dragon', 'wizard', 'ogre', 'skeleton'], hazard: 'lava' },
-  // Welt 7: Schloss-Garten — Burggraben mit Wasser
-  { name: 'Schloss-Garten', decor: 'castle', bgColor: 'linear-gradient(180deg, #6b21a8 0%, #c084fc 60%, #fce7f3 100%)', enemies: ['wizard', 'ghost', 'zombie', 'eagle'], hazard: 'water' },
-  // Welt 8: Sumpf — Säure!
-  { name: 'Sumpf', decor: 'swamp', bgColor: 'linear-gradient(180deg, #14532d 0%, #65a30d 50%, #a3e635 100%)', enemies: ['bug', 'zombie', 'wizard', 'skeleton', 'scorpion'], hazard: 'acid' },
-  // Welt 9: Sternenmeer — keine Gruben (würden ins All fallen)
-  { name: 'Sternenmeer', decor: 'stars', bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #6366f1 50%, #c4b5fd 100%)', enemies: ['ghost', 'dragon', 'eagle', 'skeleton'], hazard: null },
-  // Welt 10: Endkampf — Lava überall!
-  { name: 'Endkampf', decor: 'lava', bgColor: 'linear-gradient(180deg, #18181b 0%, #ef4444 30%, #f97316 60%, #fde047 100%)', enemies: ['dragon', 'wizard', 'ghost', 'ogre', 'eagle', 'skeleton', 'zombie', 'scorpion'], hazard: 'lava' },
+  // Welt 6: Vulkan — Lava + Bienen!
+  { name: 'Vulkan', decor: 'lava', bgColor: 'linear-gradient(180deg, #450a0a 0%, #ef4444 50%, #fbbf24 100%)', enemies: ['dragon', 'wizard', 'ogre', 'skeleton', 'bee'], hazard: 'lava' },
+  // Welt 7: Schloss-Garten — Burggraben + Augen
+  { name: 'Schloss-Garten', decor: 'castle', bgColor: 'linear-gradient(180deg, #6b21a8 0%, #c084fc 60%, #fce7f3 100%)', enemies: ['wizard', 'ghost', 'zombie', 'eagle', 'eye'], hazard: 'water' },
+  // Welt 8: Sumpf — Säure + Bienenschwärme
+  { name: 'Sumpf', decor: 'swamp', bgColor: 'linear-gradient(180deg, #14532d 0%, #65a30d 50%, #a3e635 100%)', enemies: ['bug', 'zombie', 'wizard', 'skeleton', 'scorpion', 'bee'], hazard: 'acid' },
+  // Welt 9: Sternenmeer — Augen, Geister, Adler
+  { name: 'Sternenmeer', decor: 'stars', bgColor: 'linear-gradient(180deg, #1e1b4b 0%, #6366f1 50%, #c4b5fd 100%)', enemies: ['ghost', 'dragon', 'eagle', 'skeleton', 'eye'], hazard: null },
+  // Welt 10: Endkampf — alles inklusive!
+  { name: 'Endkampf', decor: 'lava', bgColor: 'linear-gradient(180deg, #18181b 0%, #ef4444 30%, #f97316 60%, #fde047 100%)', enemies: ['dragon', 'wizard', 'ghost', 'ogre', 'eagle', 'skeleton', 'zombie', 'scorpion', 'bee', 'eye'], hazard: 'lava' },
 ]
 
 function seededRandom(seed) {
@@ -457,6 +457,10 @@ function generateLevel(index) {
       enemy = { type: 'ogre', x: baseX, y: 396, range: 50 + Math.floor(rng() * 60), hp: 3 }
     } else if (enemyType === 'scorpion') {
       enemy = { type: 'scorpion', x: baseX, y: 405, range: 60 + Math.floor(rng() * 60), hp: 2 }
+    } else if (enemyType === 'bee') {
+      enemy = { type: 'bee', x: baseX, y: Math.floor(120 + rng() * 100), range: 100 + Math.floor(rng() * 80) }
+    } else if (enemyType === 'eye') {
+      enemy = { type: 'eye', x: baseX, y: Math.floor(160 + rng() * 80), range: 100 + Math.floor(rng() * 80), hp: 2 }
     }
     // Elite-Buff in höheren Welten: 20% Chance auf +1 HP
     if (worldIdx >= 5 && enemy && rng() < 0.2) {

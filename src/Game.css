@@ -779,6 +779,16 @@
   animation: spin 0.25s linear infinite;
 }
 
+.enemy-projectile.ep-stinger {
+  filter: drop-shadow(0 0 8px #fde047) drop-shadow(0 0 3px #f59e0b);
+  font-size: 22px;
+}
+
+.enemy-projectile.ep-laser {
+  filter: drop-shadow(0 0 12px #22d3ee) drop-shadow(0 0 4px white);
+  animation: spin 0.18s linear infinite;
+}
+
 @keyframes wobble {
   from { transform: rotate(-8deg); }
   to { transform: rotate(8deg); }

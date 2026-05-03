@@ -108,6 +108,8 @@ Loose collectibles distributed in levels: 🪙 coins (+1) and ⭐ stars (+1).
 | 🦅 eagle | 1 | Flies sideways, swoops down when player passes underneath |
 | 👹 ogre | 3 | Big and slow |
 | 🦂 scorpion | 2 | Faster than bug |
+| 🐝 bee | 1 | Schwarm-zigzag, schiesst 📍 Stachel auf Spieler. Welt 6+ |
+| 👁️ eye | 2 | Free-flying Lissajous (8er-Form), schiesst ⚡ Laser. Welt 7+ |
 
 ### Damage Rules
 

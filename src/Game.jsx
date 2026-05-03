@@ -39,12 +39,16 @@ const ENEMY_EMOJI = {
   eagle: '🦅',
   ogre: '👹',
   scorpion: '🦂',
+  bee: '🐝',
+  eye: '👁️',
 }
 
 const ENEMY_PROJECTILE_EMOJI = {
   bolt: '🔮',
   fireball: '🔥',
   bone: '🦴',
+  stinger: '📍',
+  laser: '⚡',
 }
 
 // Trefferpunkte pro Typ (Standard 1)
@@ -53,6 +57,8 @@ const ENEMY_HP = {
   skeleton: 2,
   scorpion: 2,
   ogre: 3,
+  bee: 1,
+  eye: 2,
 }
 
 const ITEM_EMOJI = {
@@ -1315,6 +1321,52 @@ export default function Game({ onExit, character = '🐈' }) {
             }
           }
           if (e.diveCooldown > 0) e.diveCooldown -= 1
+        } else if (e.type === 'bee') {
+          // Biene: zigzag-Bewegung, schiesst Stachel auf Spieler.
+          // X bewegt patrol-mässig, Y oszilliert schnell (zigzag).
+          e.x += e.dir * 2.5
+          if (e.x > e.startX + e.range) e.dir = -1
+          if (e.x < e.startX - e.range) e.dir = 1
+          e.bobPhase += 0.18
+          e.y = e.startY + Math.sin(e.bobPhase) * 35
+          e.shootTimer -= 1
+          if (e.shootTimer <= 0) {
+            const dx = (p.x + PLAYER_W / 2) - (e.x + ENEMY_W / 2)
+            const dy = (p.y + PLAYER_H / 2) - (e.y + ENEMY_H / 2)
+            const dist = Math.max(1, Math.hypot(dx, dy))
+            const speed = 5
+            s.enemyProjectiles.push({
+              kind: 'stinger',
+              x: e.x + ENEMY_W / 2 - 8,
+              y: e.y + ENEMY_H / 2 - 8,
+              vx: (dx / dist) * speed,
+              vy: (dy / dist) * speed,
+              life: 110,
+            })
+            e.shootTimer = 80 + Math.floor(Math.random() * 50)
+          }
+        } else if (e.type === 'eye') {
+          // Böses Auge: Lissajous-Pattern (8er-Form), free-flying, schiesst Laser.
+          // Position relativ zu Anker (startX, startY).
+          e.bobPhase = (e.bobPhase || 0) + 0.025
+          e.x = e.startX + Math.sin(e.bobPhase) * (e.range || 120)
+          e.y = e.startY + Math.sin(e.bobPhase * 2) * 70
+          e.shootTimer -= 1
+          if (e.shootTimer <= 0) {
+            const dx = (p.x + PLAYER_W / 2) - (e.x + ENEMY_W / 2)
+            const dy = (p.y + PLAYER_H / 2) - (e.y + ENEMY_H / 2)
+            const dist = Math.max(1, Math.hypot(dx, dy))
+            const speed = 6
+            s.enemyProjectiles.push({
+              kind: 'laser',
+              x: e.x + ENEMY_W / 2 - 12,
+              y: e.y + ENEMY_H / 2 - 12,
+              vx: (dx / dist) * speed,
+              vy: (dy / dist) * speed,
+              life: 150,
+            })
+            e.shootTimer = 130 + Math.floor(Math.random() * 60)
+          }
         } else {
           // Monster: normal
           e.x += e.dir * 1.2
