@@ -180,7 +180,22 @@ hazards: [{ type: 'lava', x: 600, y: 412, w: 80, h: 30 }, ...]
 
 Additional world themes available for high levels: Vulkan, Schloss-Garten, Sumpf, Sternenmeer, Endkampf.
 
-Levels 1–5 are hand-crafted (specific platform/enemy/star layouts that must not change). Levels 6–100 are procedurally generated via `seededRandom(level * 1009 + 31)`. Difficulty scales linearly with level: width, platform count, star count, coin count, block count, enemy count.
+Levels 1–5 are hand-crafted (specific platform/enemy/star layouts that must not change). Levels 6–100 are procedurally generated via `seededRandom(level * 1009 + 31)`. Difficulty scales steiler: `difficulty = 1.5 + (level - 6) * 0.2`, bei Level 100 = 20.
+
+**Skalierung (bei diff = 20, Level 100):**
+| Parameter | Lvl 6 | Lvl 100 | Cap |
+|---|---|---|---|
+| width | 1700 | 5000 | 6000 |
+| Plattformen | 8 | 32 | 40 |
+| Sterne | 7 | 33 | 35 |
+| Münzen | 12 | 58 | 60 |
+| ❓-Blöcke | 4 | 19 | 28 |
+| Gegner | 3 | 23 | 28 |
+| Hindernisse | 2 | 14 | 14 |
+| Hazards | 1 | 11 | 12 |
+| Faller-Interval | normal | /5 | min 35 frames |
+
+**Elite-Gegner:** chance = `min(0.5, worldIdx * 0.06)`. Bei Welt 10: 50% Chance auf +1 oder +2 HP.
 
 ## Background Decoration
 

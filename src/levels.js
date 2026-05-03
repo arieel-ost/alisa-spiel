@@ -412,16 +412,18 @@ function generateLevel(index) {
   const worldIdx = Math.floor(genIdx / 10) % THEMES.length
   const localLvl = (genIdx % 10) + 1
   const theme = THEMES[worldIdx]
-  // Schwierigkeit wächst stetig mit dem Level
-  const difficulty = 1.5 + (index - 6) * 0.12
+  // Schwierigkeit waechst steiler. Bei Level 100: difficulty ≈ 20.
+  const difficulty = 1.5 + (index - 6) * 0.2
   const rng = seededRandom(index * 1009 + 31)
 
-  const width = Math.min(3200, Math.floor(1500 + difficulty * 90))
-  const numPlatforms = Math.min(22, 6 + Math.floor(difficulty * 0.9))
-  const numStars = Math.min(16, 5 + Math.floor(difficulty * 0.65))
-  const numCoins = Math.min(28, 8 + Math.floor(difficulty * 1.4))
-  const numBlocks = Math.min(16, 3 + Math.floor(difficulty * 0.45))
-  const numEnemies = Math.min(16, 2 + Math.floor(difficulty * 0.55))
+  // Levels werden viel laenger in hoeheren Welten
+  const width = Math.min(6000, Math.floor(1400 + difficulty * 180))
+  // Mehr Plattformen, mehr Sterne, mehr Muenzen, mehr Bloecke, mehr Gegner
+  const numPlatforms = Math.min(40, 6 + Math.floor(difficulty * 1.3))
+  const numStars = Math.min(35, 5 + Math.floor(difficulty * 1.4))
+  const numCoins = Math.min(60, 8 + Math.floor(difficulty * 2.5))
+  const numBlocks = Math.min(28, 3 + Math.floor(difficulty * 0.8))
+  const numEnemies = Math.min(28, 2 + Math.floor(difficulty * 1.05))
 
   const platforms = []
   const usableWidth = width - 350
@@ -501,9 +503,11 @@ function generateLevel(index) {
     } else if (enemyType === 'eye') {
       enemy = { type: 'eye', x: baseX, y: Math.floor(160 + rng() * 80), range: 100 + Math.floor(rng() * 80), hp: 2 }
     }
-    // Elite-Buff in höheren Welten: 20% Chance auf +1 HP
-    if (worldIdx >= 5 && enemy && rng() < 0.2) {
-      enemy.hp = (enemy.hp || 1) + 1
+    // Elite-Buff: Wahrscheinlichkeit waechst mit Welt (max 50%), kann auch +2 HP geben
+    const eliteChance = Math.min(0.5, worldIdx * 0.06)
+    if (enemy && rng() < eliteChance) {
+      const bonus = rng() < 0.3 ? 2 : 1 // 30% Chance auf +2 HP statt +1
+      enemy.hp = (enemy.hp || 1) + bonus
     }
     enemies.push(enemy)
   }
@@ -525,7 +529,7 @@ function generateLevel(index) {
   }
   const obstaclePool = OBSTACLE_BY_THEME[theme.decor] || ['pipe', 'brick', 'stone']
   const obstacles = []
-  const numObstacles = Math.min(6, 2 + Math.floor(difficulty * 0.3))
+  const numObstacles = Math.min(14, 2 + Math.floor(difficulty * 0.6))
   const obstZone = width - 600
   const obstGap = obstZone / Math.max(1, numObstacles)
   for (let i = 0; i < numObstacles; i++) {
@@ -545,19 +549,22 @@ function generateLevel(index) {
   // Gefahren-Felder (Lava / Wasser / Säure) — direkt am Boden, überspringbar
   const hazards = []
   if (theme.hazard) {
-    // Anzahl wächst mit Schwierigkeit, max 5
-    const numHazards = Math.min(5, 1 + Math.floor(difficulty * 0.35))
-    const hazardZone = width - 600 // Sicherheitsabstand zu Spawn (300) + Goal (300)
+    const numHazards = Math.min(12, 1 + Math.floor(difficulty * 0.55))
+    const hazardZone = width - 600
     const hazardGap = hazardZone / Math.max(1, numHazards)
     for (let i = 0; i < numHazards; i++) {
       const baseX = Math.floor(300 + i * hazardGap + rng() * (hazardGap * 0.3))
-      // Breite skaliert sanft mit Schwierigkeit, bleibt gut springbar
-      // (Sprung ohne Boost ~140px, mit Anlauf ~200px → max Hazard 130px)
-      const w = Math.floor(60 + rng() * Math.min(70, difficulty * 8))
-      // Hazard sitzt auf Boden-Höhe (GROUND_Y=420), Höhe 28px
+      // Breite skaliert mit Schwierigkeit. Cap erhoeht aber bleibt mit
+      // Mushroom/Rocket-Power gut machbar.
+      const w = Math.floor(60 + rng() * Math.min(110, difficulty * 8))
       hazards.push({ type: theme.hazard, x: baseX, y: 412, w, h: 30 })
     }
   }
+
+  // Faller-Frequenz steigt mit Schwierigkeit (kuerzeres interval = mehr Faller)
+  const themeFaller = theme.faller
+    ? { ...theme.faller, interval: Math.max(35, Math.floor(theme.faller.interval / Math.max(1, difficulty / 4))) }
+    : null
 
   return {
     name: theme.name,
@@ -571,7 +578,7 @@ function generateLevel(index) {
     enemies,
     hazards,
     obstacles,
-    faller: theme.faller,
+    faller: themeFaller,
     goal: { x: width - 80, y: 360 },
   }
 }
